@@ -1,4 +1,4 @@
-function removeDuplicates(nums: number[]): number {
+function removeDuplicates2(nums: number[]): number {
     let adjust = 0;
     for (let i = 1; i < nums.length; i++) {
         if (nums[i] === nums[i-1]) {
@@ -9,4 +9,4 @@ function removeDuplicates(nums: number[]): number {
     return nums.length - adjust;
 };
 
-console.log(removeDuplicates([0,0,1,1,1,2,2,3,3,4]));
+console.log(removeDuplicates2([0,0,1,1,1,2,2,3,3,4]));
