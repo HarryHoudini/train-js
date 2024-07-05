@@ -9,3 +9,12 @@ function runningSum (arg: number[]) {
 }
 console.log(runningSum([1,2,3])) // --> [ 1, 3, 6 ]
 
+function runningSum1 (arg: number[]) {
+    for(let i = 1; i < arg.length; i++) {
+        arg[i] = arg[i - 1] + arg[i]
+    }
+    return arg
+
+}
+console.log(runningSum([1,2,3])) // --> [ 1, 3, 6 ]
+
