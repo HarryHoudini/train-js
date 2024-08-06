@@ -1,3 +1,5 @@
+// https://leetcode.com/problems/sort-by/?envType=study-plan-v2&envId=30-days-of-javascript
+
 type JSONValue = null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
 type Fn = (value: JSONValue) => number
 
