@@ -1,3 +1,5 @@
+// https://leetcode.com/problems/chunk-array/?envType=study-plan-v2&envId=30-days-of-javascript
+
 /**
  * @param {Array} arr
  * @param {number} size
@@ -22,6 +24,7 @@ const chunk2 = (arr, size) => {
     }
     return chunkedArray;
   }
+
   function chunk3(arr: any[], size) {
     const chunkedArray: any[] = [];
 
