@@ -37,3 +37,20 @@ function flatten(input) {
   console.log(
   flatten(multiArr)
   )
+
+
+  type MultiDimensionalArray = (number | MultiDimensionalArray)[];
+
+var flat = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalArray {
+   let stack = [...arr]
+   let res = []
+   while(stack.length) {
+       let lastEl = stack.pop()
+        if (Array.isArray(lastEl)) {
+            stack.push(...lastEl)
+        } else {
+            res.push(lastEl)
+        }
+   }
+   return res.reverse()
+};
