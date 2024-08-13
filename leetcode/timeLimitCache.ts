@@ -10,11 +10,12 @@ class TimeLimitedCache {
     set(key: number, value: number, duration: number): boolean {
         if (this.cacheMap[key]?.timeoutId) { clearTimeout(this.cacheMap[key].timeoutId) }
         const isRewrite = Boolean(this.cacheMap[key])
-        this.cacheMap[key] = {...this.cacheMap[key], value}
-        this.cacheMap[key].timeoutId = setTimeout(() => {
+        this.cacheMap[key] = {
+            value,
+            timeoutId: setTimeout(() => {
             this.cacheMap[key].value = -1
             clearTimeout(this.cacheMap[key].timeoutId)
-        }, duration)
+        }, duration)}
         return isRewrite
     }
 
