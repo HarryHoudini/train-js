@@ -8,7 +8,7 @@ async function retryPromise(promiseFunction: () => Promise<void>, retries: numbe
     while(retries) {
         retries--
         await promiseFunction()
-        timeout(delay)
+        await timeout(delay)
     }
 }
 
