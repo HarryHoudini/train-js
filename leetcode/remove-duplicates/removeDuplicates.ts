@@ -16,7 +16,7 @@ function removeDuplicates(nums: number[]) {
         let insertIndex = 1;
         for(let i = 1; i < nums.length; i++){
             // We skip to next index if we see a duplicate element
-            console.log(nums[i], nums[i-1]      )
+            console.log(nums[i], nums[i-1])
             console.log(nums)
            if (nums[i] !==  nums[i-1] ){
                 nums[insertIndex] = nums[i]

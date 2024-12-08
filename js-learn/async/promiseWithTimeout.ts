@@ -6,15 +6,6 @@
 
 function promiseWithTimeout(promise: Promise<void>, timeout: number) {
    return new Promise((resolve, reject)=> {
-        const timeoutId = setTimeout(()=> {
-            console.log('Timer is over')
-            reject()
-        })
-        promise.then((val)=> {
-            clearTimeout(timeoutId)
-            resolve(val)
-        })
-    })
-
-
-}
+        const timeOutId = setTimeout(()=> { reject(), console.log("Тайм-аут")}, timeout)
+         promise.then((res)=> {resolve(res), clearTimeout(timeOutId)}).catch((err)=>{reject(err), clearTimeout(timeOutId)})
+})}
