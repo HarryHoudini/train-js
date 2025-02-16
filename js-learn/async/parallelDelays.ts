@@ -23,7 +23,6 @@ async function parallelDelays(messages: string[],  delays: number[]) {
 
  async function parallelDelays1(messages: string[],  delays: number[]) {
     return new Promise((mainResolve) => {
-         let promiseCounter = 0
          messages.forEach(async (message, i)=> {
              new Promise ((resolve)=> {
                  setTimeout(()=> (console.log(message), resolve(1)), delays[i])
