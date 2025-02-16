@@ -5,16 +5,16 @@ type Fn<T> = () => Promise<T>
 
 function promiseAll<T>(functions: Fn<T>[]): Promise<T[]> {
     let promiseResolvedCount = 0
-    const promisesArr = []
+    const promisesResult: any[] = []
     return new Promise((resolve, reject) => {
        functions.forEach((fn, i) =>
-         fn().then((res) => {
-            if (functions.length-1 === promiseResolvedCount) {
-                resolve(promisesArr)
+         fn().then((res: unknown) => {
+            if (functions.length - 1 === promiseResolvedCount) {
+                resolve(promisesResult)
             }
-            promisesArr[i] = res
+            promisesResult[i] = res
             promiseResolvedCount++
-            }).catch((rej) => {
+            }).catch((rej: unknown) => {
                 reject(rej)
             })
        )
