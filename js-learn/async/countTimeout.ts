@@ -27,15 +27,13 @@ countdown(10);  // Отсчет начнется с 10 секунд
 
 // Note: please restart the page if syntax highlighting works bad.
 function runByTimes(count: number) {
-    let counter = count
-
     setTimeout(function run() {
-        if (counter === 0 ) {
+        if (count === 0 ) {
            console.log('Timer is over')
            return
         } else {
-            console.log(counter)
-            counter--
+            console.log(count)
+            count--
          }
         setTimeout(run, 1000)
     }, 1000)
