@@ -38,12 +38,12 @@ function timeLimit2(fn: Fn, t: number): Fn {
 
 function timeLimit(fn: Fn, t: number): Fn {
     return async function(...args) {
-         return new Promise((resolve, reject)=> {
-               const timeOutId = setTimeout(()=> reject('Time Limit Exceeded'), t)
-                fn(...args)
-                .then((res)=> resolve(res))
-                .catch((err)=> reject(err))
-                .finally(()=> clearTimeout(timeOutId))
+         return new Promise((resolve, reject) => {
+            const timeOutId = setTimeout(()=> reject('Time Limit Exceeded'), t)
+            fn(...args)
+            .then((res)=> resolve(res))
+            .catch((err)=> reject(err))
+            .finally(()=> clearTimeout(timeOutId))
           })
 
         // let startTime
