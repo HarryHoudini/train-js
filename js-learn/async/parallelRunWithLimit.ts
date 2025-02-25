@@ -25,14 +25,14 @@ const tasksToDo = [
   () => delay(200).then(() => 'Task 5'),
 ];
 
-async function processQueue<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
-  const results: T[] = [];
-  let index = 0;
+async function parallelRunWithLimit<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length).fill(null);
+  const tasksQueue = tasks.map((task, index) => ({ task, index }));
 
   const workers = new Array(concurrency).fill(null).map(async () => {
-    while (index < tasks.length) {
-      const taskIndex = index++; // Assign a unique index to preserve order
-      results[taskIndex] = await tasks[taskIndex]();
+    while (tasks.length > 0) {
+      const { task, index } = tasksQueue.shift()!;
+      results[index] = await task();
     }
   });
 
@@ -40,6 +40,6 @@ async function processQueue<T>(tasks: (() => Promise<T>)[], concurrency: number)
   return results;
 }
 (async () => {
-  const results = await processQueue(tasksToDo, 2);
+  const results = await parallelRunWithLimit(tasksToDo, 2);
   console.log(results);
 })();
