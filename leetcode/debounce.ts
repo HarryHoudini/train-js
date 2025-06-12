@@ -14,3 +14,12 @@ function debounce(fn: F, t: number): F {
         }, t)
     }
 };
+
+
+function debounce1(fn: F, t: number): F {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), t);
+    }
+};
