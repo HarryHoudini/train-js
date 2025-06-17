@@ -18,11 +18,17 @@
     },
     "homepage": "https://github.com/HarryHoudini/train-js#readme",
     "dependencies": {
+        "@nestjs/config": "^4.0.2",
         "ts-node": "^10.9.1",
         "typescript": "^5.0.2"
     },
     "devDependencies": {
         "@types/node": "^24.0.2",
+        "@typescript-eslint/eslint-plugin": "^7.8.0",
+        "@typescript-eslint/parser": "^7.8.0",
+        "eslint": "^8.57.0",
+        "eslint-config-airbnb-typescript": "^17.1.0",
+        "eslint-plugin-import": "^2.29.1",
         "tsx": "^4.19.4"
     }
 }
