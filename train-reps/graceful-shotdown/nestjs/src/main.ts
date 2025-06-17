@@ -1,4 +1,3 @@
-// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
@@ -12,6 +11,7 @@ async function bootstrap() {
   const port = config.get<number>('app.port');
   const shutdownTimeout = config.get<number>('app.shutdownTimeout');
 
+  // Включаем хуки graceful shutdown внутри Nest
   app.enableShutdownHooks();
 
   const server: Server = app.getHttpServer();
@@ -22,6 +22,7 @@ async function bootstrap() {
     socket.on('close', () => connections.delete(socket));
   });
 
+  // Перехватываем сигналы и выполняем shutdown
   process.once('SIGTERM', () => shutdown(logger, app, connections, shutdownTimeout));
   process.once('SIGINT', () => shutdown(logger, app, connections, shutdownTimeout));
 
@@ -36,9 +37,12 @@ async function shutdown(
   timeout: number,
 ) {
   logger.log('Graceful shutdown initiated');
+
+  // Шаг 1: закрыть Nest-приложение (останавливает обработчики и мидлвары)
   await app.close();
   logger.log('Nest application closed, waiting for pending connections');
 
+  // Шаг 2: после таймаута принудительно уничтожить оставшиеся сокеты
   setTimeout(() => {
     logger.warn('Forcing shutdown, destroying remaining connections');
     connections.forEach((socket) => socket.destroy());
