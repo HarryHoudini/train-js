@@ -1,13 +1,16 @@
-function isPalindrome(text: String) {
+function isPalindrome(text: string) {
     return text === text.split("").reverse().join("");
 }
 
-function fastestFloor(str: String) {
-    const halfLength = Math.floor(str.length / 2);
-    for (let i = 0; i < halfLength; i++) {
-        const backIndex = str.length - 1;
-        return str[i] === str[backIndex-i];
+function fastestFloor(str: string) {
+  const halfLength = Math.floor(str.length / 2);
+  for (let i = 0; i < halfLength; i++ ) {
+    const backIndex = str.length - 1;
+    if ( str[i] !== str[backIndex - i]) {
+      return false;
     }
+  }
+  return true;
 }
 
 console.log(isPalindrome("tat"));
