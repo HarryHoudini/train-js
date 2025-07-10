@@ -19,12 +19,12 @@
 
 export function binaryArrayToNumber(arr: number[]): number{
     return parseInt(arr.join(""), 2)
-};
+}
 
 
 export function binaryArrayToNumber1(arr: number[]): number{
     return arr.reverse().reduce((a, n, i) => a + n*(2**i), 0);
-  };
+}
 
 
 export function binaryArrayToNumber3(arr: number[]): number{
@@ -40,4 +40,4 @@ export function binaryArrayToNumber3(arr: number[]): number{
     }
 
     return decimal;
-  };
+  }
