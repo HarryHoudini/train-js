@@ -11,7 +11,7 @@ function isAnagram(str1: string, str2: string): boolean {
         const tem1 = str1[i]
         const tem2 = str2[i]
         dictionary[tem1] = (dictionary[tem1] || 0) + 1
-        dictionary2[tem2] = (dictionary[tem2] || 0) + 1
+        dictionary2[tem2] = (dictionary2[tem2] || 0) + 1
     }
 
     for (const char in dictionary) {
