@@ -2,16 +2,15 @@
 // #2625
 type MultiDimensionalArray = (number | MultiDimensionalArray)[];
 
-var flat = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalArray {
-    const result: MultiDimensionalArray = []
-        arr.forEach((el)=> {
-        if (Array.isArray(el) &&  n > 0) {
-             result.push(...flat(el, n - 1))
-            } else {
-             result.push(el)
-            }
-        })
-
+const flat2 = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalArray {
+    const result = [];
+    arr.forEach(x => {
+        if(Array.isArray(x) && n > 0 ) {
+            result.push(...flat(x, n - 1))
+        }  else {
+            result.push(x);
+        }
+    })
     return result
 };
 
@@ -22,7 +21,7 @@ var flat = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalA
 type MultiDimensionalArray = (number | MultiDimensionalArray)[];
 
 // dfs
-var flat = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalArray {
+const flat = function (arr:  MultiDimensionalArray, n: number):  MultiDimensionalArray {
     let result = [];
     let dfs = (arr, n) => {
         for (const x of arr) {
