@@ -17,7 +17,9 @@ export class AppController {
       throw new Error('Critical failure');
     } catch (err) {
       // Сразу отвечаем клиенту, чтобы не держать соединение открытым
-      res.status(500).json({ message: 'Сервер столкнулся с критической ошибкой и будет перезапущен.' });
+      res.status(500).json({
+        message: 'Сервер столкнулся с критической ошибкой и будет перезапущен.',
+      });
 
       // Инициируем graceful shutdown — эмитим SIGTERM,
       // который перехвачен в main.ts
