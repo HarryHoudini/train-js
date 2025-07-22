@@ -1,3 +1,6 @@
+import { time } from "console";
+import { run } from "node:test";
+
 function repeatingTimer(message: string, interval: number, times: number) {
    const intervalId = setInterval(()=> {
     times--
@@ -11,13 +14,14 @@ function repeatingTimer(message: string, interval: number, times: number) {
 
 function repeatingTimer2(message: string, interval: number, times: number) {
 
-    function runTimer(count: number) {
+    function runTimer(count:number=0) {
         if (count < times) {
-            console.log(message)
-            setTimeout( ()=> runTimer(count + 1), interval)
+            console.log("Таймер завершен");
         }
+        setTimeout(()=> runTimer(count++), interval);
+
     }
-    runTimer(0)
+    runTimer();
 }
 
 repeatingTimer2("Привет", 1000, 5);
