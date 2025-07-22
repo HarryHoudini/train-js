@@ -4,11 +4,19 @@
 // Функция должна повторять выполнение промиса указанное количество раз с заданной задержкой между попытками, если промис отклоняется.
 
 async function retryPromise(promiseFunction: () => Promise<void>, retries: number, delay: number) {
-   const timeout = (millis: number)=> new Promise((res)=> setTimeout(res, millis))
-    while(retries) {
-        retries--
-        await promiseFunction()
-        await timeout(delay)
+    const retry = (millis: number)=>new Promise((resolve)=> { setTimeout(resolve, millis)})
+    while(retries > 0) {
+        try {
+            await promiseFunction();
+            return;
+        } catch (error) {
+            retries--;
+            if (retries === 0) {
+                throw new Error(`Все попытки завершились неудачей: ${error}`);
+            }
+            console.log(`Попытка не удалась, осталось попыток: ${retries}. Повтор через ${delay} мс...`);
+            await retry(delay);
+        }
     }
 }
 
