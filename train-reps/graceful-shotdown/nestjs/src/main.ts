@@ -23,8 +23,12 @@ async function bootstrap() {
   });
 
   // Перехватываем сигналы и выполняем shutdown
-  process.once('SIGTERM', () => shutdown(logger, app, connections, shutdownTimeout));
-  process.once('SIGINT', () => shutdown(logger, app, connections, shutdownTimeout));
+  process.once('SIGTERM', async () =>
+    shutdown(logger, app, connections, shutdownTimeout),
+  );
+  process.once('SIGINT', () =>
+    shutdown(logger, app, connections, shutdownTimeout),
+  );
 
   await app.listen(port);
   logger.log(`Server is running on http://localhost:${port}`);
