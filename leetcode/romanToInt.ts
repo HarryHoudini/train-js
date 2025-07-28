@@ -1,3 +1,5 @@
+// https://leetcode.com/problems/roman-to-integer/description/
+
 function romanToInt(s: string): number {
     const m = {
         I: 1,
@@ -19,6 +21,7 @@ function romanToInt(s: string): number {
         } else {
             ans += m[curr]
         }
+        console.log(ans)
     }
     return ans
 
