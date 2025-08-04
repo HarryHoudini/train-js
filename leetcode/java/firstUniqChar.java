@@ -11,7 +11,7 @@ class Solution {
             // } else {
             //     map.put(ch,  1);
             // }
-            map.put(ch, map.getOrDefault(ch, 0) + 1)
+            map.put(ch, map.getOrDefault(ch, 0) + 1);
         }
 
         for (Map.Entry<Character, Integer> entry : map.entrySet()) {
