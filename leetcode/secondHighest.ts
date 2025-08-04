@@ -1,3 +1,6 @@
+// 1796. Second Largest Digit in a String
+// https://leetcode.com/problems/flatten-deeply-nested-array/description/
+
 function secondHighest(s: string): number {
     let first = -1;
     let second = -1;
