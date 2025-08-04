@@ -20,6 +20,7 @@ function secondHighest(s: string): number {
     }
     return second;
 }
+
 function secondHighest2(s: string): number {
     let first = -1;
     let second = -1;
