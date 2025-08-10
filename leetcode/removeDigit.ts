@@ -8,7 +8,7 @@ function removeDigit(number: string, digit: string): string {
             candidates.push(BigInt(n))
         }
     }
-    let max = 0;
+    let max = BigInt(0);
     for (const big of candidates) {
         if (big > max) {
             max = big
