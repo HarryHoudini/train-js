@@ -4,7 +4,7 @@ function removeDigit(number: string, digit: string): string {
     for (let i=0; i < len; i++) {
         const temp = number[i];
         if (temp === digit) {
-            const n = number.slice(0, i) + number.slice(i+1, len)
+            const n = number.slice(0, i) + number.slice(i + 1)
             candidates.push(BigInt(n))
         }
     }
