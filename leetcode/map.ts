@@ -26,7 +26,7 @@ function map(arr: number[], fn: (n: number, i: number) => number): number[] {
          appliedArr[i] = fn(arr[i], i)
     }
     return appliedArr
-};
+}
 
 
 const map2 = function(arr, fn) {
