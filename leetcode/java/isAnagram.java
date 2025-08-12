@@ -7,7 +7,6 @@ import java.util.Collections;
 
 class Main {
 
-
    public static boolean isAnagrams(String str1, String str2) {
       char[] chars = str1.toCharArray();
       char[] chars2 = str2.toCharArray();
