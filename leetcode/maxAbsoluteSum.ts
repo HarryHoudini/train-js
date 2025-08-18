@@ -27,3 +27,17 @@ function maxAbsoluteSum(nums: number[]): number {
 }
 
 
+
+function maxAbsoluteSum2(nums: number[]): number {
+    let maxPositiveSum = 0
+    let mixNegativeSum = 0
+    let result = 0
+
+    for (const curr of nums) {
+       maxPositiveSum = Math.max(0, maxPositiveSum + curr)
+       mixNegativeSum = Math.min(0, mixNegativeSum + curr)
+       result = Math.max(maxPositiveSum, -mixNegativeSum, result)
+    }
+
+    return result
+}
