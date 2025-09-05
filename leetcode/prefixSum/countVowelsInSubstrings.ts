@@ -25,8 +25,9 @@ class Solution {
         const prefixSum = Array(word.length + 1).fill(0);
 
         for (let i=1; i <= word.length; i++) {
-            const isVowels = vowels.has(word[i])
-            prefixSum[i] = prefixSum[i-1] + (isVowels ? 1 : 0)
+            const prevIdx = i - 1
+            const isVowels = vowels.has(word[prevIdx])
+            prefixSum[i] = prefixSum[prevIdx] + (isVowels ? 1 : 0)
         }
 
         const result: number[] = []
