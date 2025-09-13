@@ -35,7 +35,7 @@ function maxAbsoluteSum2(nums: number[]): number {
 
     for (const curr of nums) {
        maxPositiveSum = Math.max(0, maxPositiveSum + curr)
-       mixNegativeSum = Math.min(0, mixNegativeSum + curr)
+       mixNegativeSum = Math.min(0, mixNegativeSum + curr) // There always be negative number
        result = Math.max(maxPositiveSum, -mixNegativeSum, result)
     }
 
