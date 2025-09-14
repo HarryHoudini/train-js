@@ -79,3 +79,25 @@ function minimumAverage(nums: number[]): number {
     return result
 
 };
+
+
+
+function minimumAverage2(nums: number[]): number {
+    const sortedNums = nums.sort((a,b) => a-b)
+
+    let left = 0
+    let right = sortedNums.length - 1
+
+    let minAvg = 51
+
+    while (left < right) {
+        const candidate = (sortedNums[left] + sortedNums[right]) / 2
+        if (candidate < minAvg) minAvg = candidate
+
+       left++
+       right--
+    }
+
+    return minAvg
+
+};
