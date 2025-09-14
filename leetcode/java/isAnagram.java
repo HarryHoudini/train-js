@@ -33,24 +33,25 @@ import java.util.Collections;
 
 class Main {
 
-   public static boolean isAnagrams(String str1, String str2) {
-      char[] chars = str1.toCharArray();
-      char[] chars2 = str2.toCharArray();
+    public boolean isAnagram(String s, String t) {
+        if (s.length() != t.length())
+            return false;
+        char[] chsS = s.toCharArray();
+        char[] chsT = t.toCharArray();
 
-      int[] freq1 = new int[256];
-      int[] freq2 = new int[256];
+        int[] freqS = new int[256];
+        int[] freqT = new int[256];
 
-      for (int i = 0; i < chars.length; i++) {
-        freq1[chars[i]]++;
-        freq2[chars2[i]]++;
-      }
+        for (int i = 0; i < chsS.length; i++) {
+            freqS[chsS[i]]++;
+            freqT[chsT[i]]++;
+        }
 
-      for (int j = 0; j < chars.length; j++) {
-        if (freq1[chars[j]] != freq2[chars2[j]]) return false;
-      }
-
-      return true;
-
+        for (int i = 0; i < freqS.length; i++) {
+            if (freqS[i] != freqT[i])
+                return false;
+        }
+        return true;
     }
 
   public static void main(String[] args) {
