@@ -31,3 +31,28 @@ class Solution {
 // Input: s = "zbczbczbc"
 //             123123123
 // Output: true
+
+
+class Solution {
+    public boolean repeatedSubstringPattern(String s) {
+        int slen = s.length();
+
+        int upTo = (int) Math.ceil(Math.sqrt(slen));
+        for (int i = 1; i <= upTo; ++i) {
+            if (slen % i == 0) {
+                if (i != slen && check(s, s.substring(0, i))) {
+                    return true;
+                }
+                int len2 = slen / i;
+                if (len2 != 1 && len2 != slen && check(s, s.substring(0, len2))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean check(String s, String substr) {
+        return s.endsWith(substr) && substr.repeat(s.length() / substr.length()).equals(s);
+    }
+}
