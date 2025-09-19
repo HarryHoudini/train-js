@@ -32,9 +32,9 @@ class Solution {
         // s = p + p (repeat k >=2 )
         // s + s = p + p + p + p (2k)
         // original idea s without patterns don't appears
-        // after middle dubled string
+        // after middle doubled string
         // result = s + s -> cut string to one because
-        // s should apears in dubled str
+        // s should appears in doubled str
         // find original in cut
 
 
