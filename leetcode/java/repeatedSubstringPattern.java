@@ -56,3 +56,5 @@ class Solution {
         return s.endsWith(substr) && substr.repeat(s.length() / substr.length()).equals(s);
     }
 }
+
+
