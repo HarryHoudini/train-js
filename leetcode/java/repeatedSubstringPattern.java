@@ -38,9 +38,9 @@ class Solution {
         // find original in cut
 
 
-        String dubledString = s + s;
+        String doubledString = s + s;
 
-        String cutString = dubledString.substring(1, dubledString.length()-1);
+        String cutString = doubledString.substring(1, doubledString.length()-1);
 
         return cutString.contains(s);
 
