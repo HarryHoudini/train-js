@@ -22,35 +22,37 @@
 // [1,2,2,2,2,3,3,4,5,7,8,8,9]
 //  | | | | | | | | | | | | |
 //  0
-// maxDivider=4
-// candidate=1
+// Conditions say we need uniq num an each arr. So we need at least 4 arr(slices)
+// maxSlicesNeed = 4  // We have 4 times of 2.
+// candidate = 1
 // needParts = 3
 
 // parts = 13/3 = 4,
 
 function canDivideIntoSubsequences(nums: number[], k: number) {
         const n = nums.length
-        const maxAllowed = Math.floor(n/k)
+        const maxAllowedSlices = Math.floor(n/k)
         let currentCounter = 1;
-        let maxDivider = 1;
+        let maxSlicesNeed = 1;
 
         for (let i = 1; i < n; i++) {
 
             if (nums[i-1] === nums[i]) {
                 currentCounter++
             } else {
-                if (currentCounter > maxDivider) {
-                     maxDivider = currentCounter
+                if (currentCounter > maxSlicesNeed) {
+                     maxSlicesNeed = currentCounter
                 }
                 currentCounter = 1
             }
             // Early exit if wi cant divide our nums to need k
-            if (maxDivider > maxAllowed) return false
+            if (maxSlicesNeed > maxAllowedSlices) return false
         }
 
-        if (currentCounter > maxDivider) maxDivider = currentCounter
+        // After loop we need complete step maxDivider = currentCounter because we exit in loop
+        if (currentCounter > maxSlicesNeed) maxSlicesNeed = currentCounter
 
 
-        return maxAllowed >= maxDivider
+        return maxAllowedSlices >= maxSlicesNeed
 
 }
