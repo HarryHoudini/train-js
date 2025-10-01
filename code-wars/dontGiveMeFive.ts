@@ -29,7 +29,7 @@ export function my_dontGiveMeFive(start:number, end:number) : number
 
 export function dontGiveMeFive(start:number, end:number) : number {
     let count = 0;
-    for (let i=start; i<=end; i++) {
+    for (let i = start; i <= end; i++) {
       if (!String(i).match(/5/)) {
         count++;
       }
