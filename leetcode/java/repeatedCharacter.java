@@ -1,7 +1,7 @@
 // https://leetcode.com/problems/first-letter-to-appear-twice/description/
 // 2351. First Letter to Appear Twice
 
-сlass Solution {
+class Solution {
     public char repeatedCharacter(String s) {
         HashMap<Character,Integer> map = new HashMap<>();
         for (int i = 0; i < s.length(); i++){

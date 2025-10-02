@@ -2,6 +2,8 @@
 // 2 <= timePoints.length <= 2 * 10^4
 
 
+import java.util.Arrays;
+
 class FindMinDiff {
     public int findMidDiff(String[] times) {
         int MIN_PER_DAY = 1440;
@@ -12,7 +14,7 @@ class FindMinDiff {
         int prev = first;
 
         for (int i = 1; i < times.length; i++) {
-            int current = toMin(times[idx]);
+            int current = toMin(times[i]);
             result = Math.min(result, current - prev);
         }
 
@@ -25,6 +27,6 @@ class FindMinDiff {
         String[] parts = v.split(":");
         int h = Integer.parseInt(parts[0]);
         int m = Integer.parseInt(parts[1]);
-        return h * 60 + m
+        return h * 60 + m;
     }
 }

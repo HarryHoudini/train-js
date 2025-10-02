@@ -7,7 +7,7 @@ public class VowelStrings {
         int[] prefixSum = new int[word.length() + 1];
 
         for (int i=1; i <= word.length(); i++) {
-            int isVowels = vowels.contains(word.charAt(i))l;
+            int isVowels = vowels.contains(word.charAt(i));
            int prefixSum[i-1] = prefixSum[i] + (isVowels ? 1 : 0);
         }
     }
