@@ -15,7 +15,7 @@
 }
 
 
-class Solution {
+class RepeatedCharacter {
     public char repeatedCharacter(String s) {
         Set<Character> map = new HashSet<>();
 

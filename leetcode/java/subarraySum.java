@@ -25,7 +25,7 @@
 // [-1, 1], [0], [1, -1, 0]
 
 
-public class Solution {
+public class SubarraySum {
     public Integer subarraySum(int[] nums, Integer k) {
         Map<Integer, Integer> prefix = new HashMap<>();
         prefix.put(0, 1);

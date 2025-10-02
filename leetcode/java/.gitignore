@@ -1,2 +1,6 @@
 .idea
 leetcode.iml
+/gradlew
+/gradlew.bat
+/.gradle/
+/gradle/wrapper/

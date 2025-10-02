@@ -1,4 +1,4 @@
-class Solution {
+class FibonacciIterative {
     public int fib(int n) {
      if (n < 2) return n;
      int a = 0, b = 1, sum = 0;
@@ -13,7 +13,7 @@ class Solution {
 }
 
 
-class Solution {
+class FibonacciRecursive {
     public int fib(int n) {
        int[]dp = new int[n+1];
        return fibo(n,dp);

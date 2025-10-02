@@ -2,7 +2,7 @@
 // 2 <= timePoints.length <= 2 * 10^4
 
 
-class Solution {
+class FindMinDiff {
     public int findMidDiff(String[] times) {
         int MIN_PER_DAY = 1440;
         Arrays.sort(times);

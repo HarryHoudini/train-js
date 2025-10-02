@@ -64,7 +64,7 @@ class Main {
 
 // For discovery
 
-class Solution {
+class IsAnagram {
     static {
         Solution sol = new Solution();
         for (int i = 0; i < 500; i++)
