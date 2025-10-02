@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+group 'com.harryhoudini'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = '18'
+targetCompatibility = '18'
+
+sourceSets {
+    main {
+        java {
+            // Since Java files are in the project root, set the source directory accordingly
+            srcDirs = ['.']
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Add your dependencies here
+}
