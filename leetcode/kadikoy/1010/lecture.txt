@@ -1,0 +1,3162 @@
+https://leetcode.com/problems/minimize-malware-spread
+
+Approach 1:
+
+Union-Find (union by size)
+
+sizes:      7  6  3  5  3
+components: A, B, C, D, E
+counters:   1  2  1  2
+(of initials that belong to the component)
+
+initial:
+0, 5, 8, 13, 24, 25
+B  A  B  D   C   D
+
+malwareSpreadSize if all initials are actually infected - 7+6+3+5=21
+
+loop through initial and deinfect current node:
+if 0 was not infected -> malwareSpreadSize = 21            magicNumber = 0
+if 5 was not infected -> malwareSpreadSize = 21 - 7 = 14   magicNumber = -7
+...
+
+minMalwareSpreadSize =... indexInIntial =...
+
+
+Approach 2:
+
+Same, but use BFS/DFS to find components
+
+
+Approach 3:
+
+Loop through initial vector,
+BFS/DFS from every element:
+- stop when we stumble upon another node from initial vector
+or
+- don't stop, visit entire component, remember nodes that we've stumbled
+  upon that belong to initial vector
+
+1-0-0-0-0-0-0-0-1-0-0-0-0-0-0-1
+
+1 - 0 - 0 - 0 - 0
+            |   |
+            0 - 0
+            |   |
+1 - 0 - 0 - 0 - 0
+            |   |
+            0 - 0
+            |   |
+1 - 0 - 0 - 0 - 0
+
+
+
+1 bit - connection
+9 bits - 0..300 parent
+9 bits - 0..300 size
+18 bits for union find in place
+
+9 bits - infectedCount
+
+27 bits total ===> fits into 32-bit integer
+
+
+
+
+// kotlin, BFS
+class Solution {
+    fun minMalwareSpread(graph: Array<IntArray>, initial: IntArray): Int {
+        var maxGroupSize = 0
+        var savedIndex = initial[0]
+        val infectedSet = HashSet<Int>()
+        initial.forEach { infectedIndex ->
+            infectedSet += infectedIndex
+            if (infectedIndex < savedIndex) savedIndex = infectedIndex
+        }
+
+        fun getGroupSize(startIndex: Int): Int {
+            val visited = BooleanArray(300)
+            val queue = LinkedList<Int>()
+            visited[startIndex] = true
+            queue += startIndex
+            var counter = 0
+            while (queue.isNotEmpty()) {
+                val index = queue.poll()
+                counter++
+                val row = graph[index]
+                for (colIndex in row.indices) {
+                    if (colIndex == index || visited[colIndex]) continue
+                    if (row[colIndex] == 0) continue
+                    if (colIndex in infectedSet) return 0
+                    queue += colIndex
+                    visited[colIndex] = true
+                }
+            }
+            return counter
+        }
+
+        for (infectedIndex in initial) {
+            val groupSize = getGroupSize(infectedIndex)
+            if (groupSize > maxGroupSize || groupSize == maxGroupSize && infectedIndex < savedIndex) {
+                maxGroupSize = groupSize
+                savedIndex = infectedIndex
+            }
+        }
+        return savedIndex
+    }
+}
+
+// kotlin, union find
+class Solution {
+    fun minMalwareSpread(graph: Array<IntArray>, initial: IntArray): Int {
+        val n = graph.size
+        val unionFind = UnionFind(n)
+        for (rowIndex in graph.indices) {
+            for (colIndex in rowIndex+1 until n) {
+                if (graph[rowIndex][colIndex] == 0) continue
+                unionFind.unite(rowIndex, colIndex)
+            }
+        }
+        val map = LinkedHashMap<Int, ArrayList<Int>>()
+        var node = n
+        for (infectedIndex in initial) {
+            val parent = unionFind.find(infectedIndex)
+            val list = map[parent] ?: ArrayList<Int>().also { map[parent] = it }
+            list += infectedIndex
+            node = minOf(node, infectedIndex)
+        }
+        var maxSize = -1
+        for ((parent, list) in map) {
+            if (list.size > 1) continue
+            val size = unionFind.size(parent)
+            if (size < maxSize || size == maxSize && node < list[0]) continue
+            maxSize = size
+            node = list[0]
+        }
+        return node
+    }
+
+    private class UnionFind(n: Int) {
+        private val parents = IntArray(n) { it }
+        private val sizes = IntArray(n) { 1 }
+
+        fun unite(index1: Int, index2: Int): Boolean {
+            val parent1 = find(index1)
+            val parent2 = find(index2)
+            if (parent1 == parent2) return false
+
+            if (sizes[parent1] > sizes[parent2]) {
+                sizes[parent1] += sizes[parent2]
+                parents[parent2] = parent1
+            } else {
+                sizes[parent2] += sizes[parent1]
+                parents[parent1] = parent2
+            }
+            return true
+        }
+
+        fun find(index: Int): Int {
+            var curr: Int = index
+            while (curr != parents[curr]) {
+                val grandparent = parents[parents[curr]]
+                parents[curr] = grandparent
+                curr = grandparent
+            }
+            return curr
+        }
+
+        fun size(index: Int): Int = sizes[index]
+
+    }
+}
+
+// kotlin, union find (optimized)
+class Solution {
+    private class ComponentData(var infectedCount: Int, val infectedIndex: Int)
+    fun minMalwareSpread(graph: Array<IntArray>, initial: IntArray): Int {
+        val n = graph.size
+        val unionFind = UnionFind(n)
+        for (rowIndex in graph.indices) {
+            for (colIndex in rowIndex+1 until n) {
+                if (graph[rowIndex][colIndex] == 0) continue
+                unionFind.unite(rowIndex, colIndex)
+            }
+        }
+        val map = LinkedHashMap<Int, ComponentData>()
+        var nodeIndex = n - 1
+        for (infectedIndex in initial) {
+            val parent = unionFind.find(infectedIndex)
+            val componentData = map[parent] ?: ComponentData(0, infectedIndex).also { map[parent] = it }
+            componentData.infectedCount++
+            nodeIndex = minOf(nodeIndex, infectedIndex)
+        }
+        var maxSize = 0
+        for ((parent, componentData) in map) {
+            if (componentData.infectedCount > 1) continue
+            val size = unionFind.size(parent)
+            if (size < maxSize || size == maxSize && nodeIndex < componentData.infectedIndex) continue
+            maxSize = size
+            nodeIndex = componentData.infectedIndex
+        }
+        return nodeIndex
+    }
+
+    private class UnionFind(n: Int) {
+        private val parents = IntArray(n) { it }
+        private val sizes = IntArray(n) { 1 }
+
+        fun unite(index1: Int, index2: Int): Boolean {
+            val parent1 = find(index1)
+            val parent2 = find(index2)
+            if (parent1 == parent2) return false
+
+            if (sizes[parent1] > sizes[parent2]) {
+                sizes[parent1] += sizes[parent2]
+                parents[parent2] = parent1
+            } else {
+                sizes[parent2] += sizes[parent1]
+                parents[parent1] = parent2
+            }
+            return true
+        }
+
+        fun find(index: Int): Int {
+            var curr: Int = index
+            while (curr != parents[curr]) {
+                val grandparent = parents[parents[curr]]
+                parents[curr] = grandparent
+                curr = grandparent
+            }
+            return curr
+        }
+
+        fun size(index: Int): Int = sizes[index]
+
+    }
+}
+
+
+// C#, Union-Find
+// 5ms 100%
+public static class SpreadMinimizer
+{
+    public static int FindNodeToDeinfect(int[][] adjacencyMatrix, int[] infectedNodes)
+    {
+        int height = adjacencyMatrix.Length;
+        int width = height;
+        int nodeCount = height;
+
+        var unionFind = new UnionFind(nodeCount);
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < y; x++)
+                if (adjacencyMatrix[y][x] == 1)
+                    unionFind.Unite(x, y);
+
+        Span<int> infectedCountByComponentId = stackalloc int[nodeCount];
+        foreach (int infectedNode in infectedNodes)
+        {
+            int componentId = unionFind.FindRoot(infectedNode);
+            infectedCountByComponentId[componentId]++;
+        }
+
+        int nodeToDeinfect = infectedNodes[0];
+        int maxDeinfectionBenefit = 0;
+        foreach (int infectedNode in infectedNodes)
+        {
+            int componentId = unionFind.FindRoot(infectedNode);
+            int deinfectionBenefit = infectedCountByComponentId[componentId] > 1
+                                     ? 0
+                                     : unionFind.GetComponentSize(componentId);
+            if (deinfectionBenefit > maxDeinfectionBenefit ||
+                (deinfectionBenefit == maxDeinfectionBenefit && infectedNode < nodeToDeinfect))
+            {
+                nodeToDeinfect = infectedNode;
+                maxDeinfectionBenefit = deinfectionBenefit;
+            }
+        }
+        return nodeToDeinfect;
+    }
+
+    private class UnionFind
+    {
+        private readonly int[] parents;
+        private readonly int[] sizes;
+
+        public UnionFind(int elementCount)
+        {
+            parents = new int[elementCount];
+            sizes = new int[elementCount];
+            for (int i = 0; i < elementCount; i++)
+            {
+                parents[i] = i;
+                sizes[i] = 1;
+            }
+        }
+
+        public int FindRoot(int element)
+        {
+            int current = element;
+            int parent = parents[current];
+            int grandparent = parents[parent];
+            while (parent != grandparent)
+            {
+                parents[current] = grandparent;
+                current = grandparent;
+                parent = parents[current];
+                grandparent = parents[parent];
+            }
+            return grandparent;
+        }
+
+        public void Unite(int elementA, int elementB)
+        {
+            int rootA = FindRoot(elementA);
+            int rootB = FindRoot(elementB);
+            if (rootA == rootB)
+                return;
+
+            if (sizes[rootA] < sizes[rootB])
+            {
+                parents[rootA] = rootB;
+                sizes[rootB] += sizes[rootA];
+            }
+            else
+            {
+                parents[rootB] = rootA;
+                sizes[rootA] += sizes[rootB];
+            }
+        }
+
+        public int GetComponentSize(int root)
+        {
+            return sizes[root];
+        }
+    }
+}
+
+
+https://leetcode.com/problems/minimize-malware-spread
+
+// C#
+// Union-Find to find components +
+// Dict (key - componentId, value - (initiallyInfectedNodeCount, minIdOfInitiallyInfectedNode)) +
+// go through dict, estimate benefit of curing (if possible) each component
+// 5ms 100%
+public static class SpreadMinimizer
+{
+    public static int FindNodeToDeinfect(int[][] adjacencyMatrix, int[] infectedNodes)
+    {
+        int height = adjacencyMatrix.Length;
+        int width = height;
+        int nodeCount = height;
+
+        var unionFind = new UnionFind(nodeCount);
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < y; x++)
+                if (adjacencyMatrix[y][x] == 1)
+                    unionFind.Unite(x, y);
+
+        var componentsById = new Dictionary<int, ComponentInfo>();
+        foreach (int infectedNode in infectedNodes)
+        {
+            int componentId = unionFind.FindRoot(infectedNode);
+            if (componentsById.TryGetValue(componentId, out var component))
+            {
+                component.InfectedCount++;
+                component.MinInfectedNode = Math.Min(component.MinInfectedNode, infectedNode);
+            }
+            else
+                componentsById[componentId] = new(1, infectedNode);
+        }
+
+        int nodeToDeinfect = infectedNodes[0];
+        int maxDeinfectionBenefit = 0;
+        foreach (var kv in componentsById)
+        {
+            int componentId = kv.Key;
+            var component = kv.Value;
+            int deinfectionBenefit = component.InfectedCount > 1 ? 0 : unionFind.GetComponentSize(componentId);
+            if (deinfectionBenefit > maxDeinfectionBenefit ||
+                (deinfectionBenefit == maxDeinfectionBenefit && component.MinInfectedNode < nodeToDeinfect))
+            {
+                nodeToDeinfect = component.MinInfectedNode;
+                maxDeinfectionBenefit = deinfectionBenefit;
+            }
+        }
+        return nodeToDeinfect;
+    }
+
+    private class ComponentInfo(int infectedCount, int minInfectedNode)
+    {
+        public int InfectedCount { get; set; } = infectedCount;
+        public int MinInfectedNode { get; set; } = minInfectedNode;
+    }
+
+    private class UnionFind
+    {
+        private readonly int[] parents;
+        private readonly int[] sizes;
+
+        public UnionFind(int elementCount)
+        {
+            parents = new int[elementCount];
+            sizes = new int[elementCount];
+            for (int i = 0; i < elementCount; i++)
+            {
+                parents[i] = i;
+                sizes[i] = 1;
+            }
+        }
+
+        public int FindRoot(int element)
+        {
+            int current = element;
+            int parent = parents[current];
+            int grandparent = parents[parent];
+            while (parent != grandparent)
+            {
+                parents[current] = grandparent;
+                current = grandparent;
+                parent = parents[current];
+                grandparent = parents[parent];
+            }
+            return grandparent;
+        }
+
+        public void Unite(int elementA, int elementB)
+        {
+            int rootA = FindRoot(elementA);
+            int rootB = FindRoot(elementB);
+            if (rootA == rootB)
+                return;
+
+            if (sizes[rootA] < sizes[rootB])
+            {
+                parents[rootA] = rootB;
+                sizes[rootB] += sizes[rootA];
+            }
+            else
+            {
+                parents[rootB] = rootA;
+                sizes[rootA] += sizes[rootB];
+            }
+        }
+
+        public int GetComponentSize(int root)
+        {
+            return sizes[root];
+        }
+    }
+}
+
+Time - O(n^2)
+Space - O(n)
+
+// C#, Same, but OrderedDict (Dict + DynamicArray) <- hoping to make iteration faster
+// 8ms 93%
+
+
+// C#
+// Go through infected nodes, estimate the benefit of curing each node:
+// BFS/DFS through node's component (Queue/Stack + Set/BitArray of seen nodes) to calc component's size +
+// Early exit when we stumble upon another infected node (i.e., this component can't be cured)
+// 3ms 100% (BFS)
+public static class SpreadMinimizer
+{
+    public static int FindNodeToDeinfect(int[][] adjacencyMatrix, int[] infectedNodes)
+    {
+        int height = adjacencyMatrix.Length;
+        int width = height;
+        int nodeCount = height;
+
+        var infectedNodeFlags = new BitArray(nodeCount);
+        foreach (int infectedNode in infectedNodes)
+            infectedNodeFlags[infectedNode] = true;
+
+        var seenNodeFlags = new BitArray(nodeCount);
+        var nodesToVisit = new Queue<int>();
+
+        int nodeToDeinfect = infectedNodes[0];
+        int maxDeinfectionBenefit = 0;
+        foreach (int infectedNode in infectedNodes)
+        {
+            int deinfectionBenefit = CalculateDeinfectionBenefit(infectedNode);
+            if (deinfectionBenefit > maxDeinfectionBenefit ||
+                (deinfectionBenefit == maxDeinfectionBenefit && infectedNode < nodeToDeinfect))
+            {
+                nodeToDeinfect = infectedNode;
+                maxDeinfectionBenefit = deinfectionBenefit;
+            }
+        }
+        return nodeToDeinfect;
+
+
+        int CalculateDeinfectionBenefit(int infectedNode)
+        {
+            nodesToVisit.Clear();
+            seenNodeFlags.SetAll(false);
+
+            nodesToVisit.Enqueue(infectedNode);
+            seenNodeFlags[infectedNode] = true;
+            int componentSize = 1;
+            while (nodesToVisit.Count > 0)
+            {
+                int node = nodesToVisit.Dequeue();
+                for (int neighbor = 0; neighbor < width; neighbor++)
+                    if (adjacencyMatrix[node][neighbor] == 1)
+                    {
+                        if (seenNodeFlags[neighbor])
+                            continue;
+                        if (infectedNodeFlags[neighbor])
+                            return 0;
+                        nodesToVisit.Enqueue(neighbor);
+                        seenNodeFlags[neighbor] = true;
+                        componentSize++;
+                    }
+            }
+            return componentSize;
+        }
+    }
+}
+
+// C#, Same, but DFS
+// 3ms 100%
+
+
+// C#
+// Go through infected nodes, estimate the benefit of curing each node:
+// BFS/DFS through node's component (Queue/Stack + Set/BitArray of seen nodes) to calc component's size +
+// If we find any other infected nodes, then this component can't be cured =>
+//  	deinfectionBenefit = 0 for all infected nodes in this component, no need to start BFS/DFS from them
+// 7ms 100%
+public static class SpreadMinimizer
+{
+    public static int FindNodeToDeinfect(int[][] adjacencyMatrix, int[] infectedNodes)
+    {
+        int height = adjacencyMatrix.Length;
+        int width = height;
+        int nodeCount = height;
+
+        var infectedNodeFlags = new BitArray(nodeCount);
+        foreach (int infectedNode in infectedNodes)
+            infectedNodeFlags[infectedNode] = true;
+
+        var seenNodeFlags = new BitArray(nodeCount);
+        var nodesToVisit = new Queue<int>();
+        var zeroBenefitNodeFlags = new BitArray(nodeCount);
+
+        int nodeToDeinfect = infectedNodes[0];
+        int maxDeinfectionBenefit = 0;
+        foreach (int infectedNode in infectedNodes)
+        {
+            int deinfectionBenefit = CalculateDeinfectionBenefit(infectedNode);
+            if (deinfectionBenefit > maxDeinfectionBenefit ||
+                (deinfectionBenefit == maxDeinfectionBenefit && infectedNode < nodeToDeinfect))
+            {
+                nodeToDeinfect = infectedNode;
+                maxDeinfectionBenefit = deinfectionBenefit;
+            }
+        }
+        return nodeToDeinfect;
+
+
+        int CalculateDeinfectionBenefit(int infectedNode)
+        {
+            if (zeroBenefitNodeFlags[infectedNode])
+                return 0;
+
+            nodesToVisit.Enqueue(infectedNode);
+            seenNodeFlags[infectedNode] = true;
+            int componentSize = 1;
+            bool wasAnotherInfectedFound = false;
+            while (nodesToVisit.Count > 0)
+            {
+                int node = nodesToVisit.Dequeue();
+                for (int neighbor = 0; neighbor < width; neighbor++)
+                    if (adjacencyMatrix[node][neighbor] == 1)
+                    {
+                        if (seenNodeFlags[neighbor])
+                            continue;
+                        if (infectedNodeFlags[neighbor])
+                        {
+                            wasAnotherInfectedFound = true;
+                            zeroBenefitNodeFlags[neighbor] = true;
+                        }
+                        nodesToVisit.Enqueue(neighbor);
+                        seenNodeFlags[neighbor] = true;
+                        componentSize++;
+                    }
+            }
+
+            if (wasAnotherInfectedFound)
+            {
+                zeroBenefitNodeFlags[infectedNode] = true;
+                return 0;
+            }
+            return componentSize;
+        }
+    }
+}
+
+// Can get away with only one BitArray
+
+// C#, Same, but DFS instead of BFS
+// 6ms 100%
+
+
+//---------------------------------------------------------------------------
+
+https://leetcode.com/problems/design-add-and-search-words-data-structure
+
+Approach 1:
+
+Trie + Recursion on Wildcard chars
+
+Let D = number of placeholders, A = alphabet size, L = word length, W = # of words added
+TC:
+- addWord: O(L)
+- search: O((A^D)*L)
+MC:
+- addWord: O(1)
+- search: O(L) for recursion stack if naively recursive, O(D) for slightly optimized version
+- per-instance: O(W*A*L) for array-based worst-case, or O(W*L) for hash-map implementation worst-case
+
+
+
+Approach 2:
+
+Trie + BFS/DFS
+TC:
+- addWord: O(L)
+- search: O((A^D)*L)
+MC:
+- addWord: O(1)
+- search: BFS — O(A^D), DFS — O(L) stack: [{childIndex, node, wordIndex}, ...] vs [{node, indexInWord}] <-- O(D*A)
+- per-instance: O(W*A*L) for array-based worst-case, or O(W*L) for hash-map implementation worst-case
+
+
+Approach 3:
+
+Trie + Add children to Queue/Stack only on Wildcard chars
+TC:
+- addWord: O(L)
+- search: O((A^D)*L)
+MC:
+- addWord: O(1)
+- search: BFS — O(A^D), DFS — O(D) stack: [{childIndex, node, wordIndex}, ...] vs [{node, indexInWord}] O(D*A)
+- per-instance: O(W*A*L) for array-based worst-case, or O(W*L) for hash-map implementation worst-case
+
+
+Optimizations:
+* Early exit on first match
+* Store (minWordLength, maxWordLength) in every node, early exit when wordLength doesn't fall in the range
+
+
+
+
+// kotlin, DFS (recursive)
+// 72%, 212 ms
+class WordDictionary() {
+
+    private val trie = Trie()
+
+    fun addWord(word: String) {
+        trie.add(word)
+    }
+
+    fun search(word: String): Boolean {
+        return trie.matches(word)
+    }
+
+    private class Trie {
+        private val root = TrieNode()
+
+        fun add(str: String) {
+            var node = root
+            for (char in str) {
+                val childIndex = char - ALPHABET_START
+                val childNode = node.children[childIndex] ?: TrieNode().also {
+                    node.children[childIndex] = it
+                    node.childrenArray += it
+                }
+                node.updateLengthRange(str.length)
+                node = childNode
+            }
+            node.updateLengthRange(str.length)
+            node.isWord = true
+        }
+
+        fun matches(str: String): Boolean = matches(str, 0, root)
+
+        private fun matches(str: String, strIndex: Int, startNode: TrieNode): Boolean {
+            var node = startNode
+            for (index in strIndex..str.lastIndex) {
+                if (str.length < node.minLength || str.length > node.maxLength) return false
+                val char = str[index]
+                if (char == WILDCARD_CHAR) {
+                    return node.childrenArray.any { childNode -> matches(str, index + 1, childNode) }
+                } else {
+                    val childIndex = char - ALPHABET_START
+                    val childNode = node.children[childIndex] ?: return false
+                    node = childNode
+                }
+            }
+            return node.isWord
+        }
+    }
+
+    private class TrieNode {
+        var isWord = false
+        var minLength = MAX_WORD_LENGTH
+        var maxLength = 0
+        val children = Array<TrieNode?>(ALPHABET_SIZE) { null }
+        val childrenArray = ArrayList<TrieNode>()
+
+        fun updateLengthRange(length: Int) {
+            maxLength = maxOf(length, maxLength)
+            minLength = minOf(length, minLength)
+        }
+    }
+
+    companion object {
+        private const val WILDCARD_CHAR = '.'
+        private const val MAX_WORD_LENGTH = 25
+        private const val ALPHABET_SIZE = 26
+        private const val ALPHABET_START = 'a'
+    }
+}
+
+
+
+
+
+// Python
+
+"""
+Approach 1: Trie with recursion on .
+TC: addWord: O(L)
+MC:
+"""
+
+class WordDictionary:
+
+    class Node:
+        def __init__(self):
+            self.final = False
+            self.children = collections.defaultdict(lambda: WordDictionary.Node())
+
+    def __init__(self):
+        self.root = WordDictionary.Node()
+
+    def addWord(self, word: str) -> None:
+        node = self.root
+        for char in word:
+            node = node.children[char]
+        node.final = True
+
+    def search(self, word: str) -> bool:
+        def dfs(node, idx) -> bool:
+            if node is None:
+                return False
+            if len(word) == idx:
+                return node.final
+            if word[idx] == '.':
+                return any(dfs(child, idx+1) for child in node.children.values())
+            else:
+                return dfs(node.children.get(word[idx]), idx+1)
+
+        return dfs(self.root, 0)
+
+
+"""
+Approach 2: Hashmap with loop
+TC:
+- addWord: O(L) for hash fn calc
+- search: O((A^D)*L) for D nested loops, L strings to materialize and hash
+
+MC:
+- addWord: O(L) for hash fn calc
+- search: O(L) for temp string builder
+- per-instance: O(W*L)
+"""
+
+class WordDictionary:
+
+    def __init__(self):
+        gc.cleanup(); gc.disable()
+        self.words = set()
+
+    def addWord(self, word: str) -> None:
+        self.words.add(word)
+
+    def find_dots(self, word: str) -> Tuple[int, ...]:
+        dot1, dot2 = None, None
+        for idx in range(len(word)):
+            if word[idx] == '.':
+                if dot1 is None:
+                    dot1 = idx
+                else:
+                    dot2 = idx
+        return dot1, dot2
+
+    def search(self, word: str) -> bool:
+        az = [chr(c) for c in range(ord('a'), ord('z')+1)]
+        dot1, dot2 = self.find_dots(word)
+        if dot1 is not None:
+            if dot2 is not None:
+                word = list(word)
+                for c1 in az:
+                    word[dot1] = c1
+                    for c2 in az:
+                        word[dot2] = c2
+                        if "".join(word) in self.words:
+                            return True
+            else:
+                word = list(word)
+                for c1 in az:
+                    word[dot1] = c1
+                    if "".join(word) in self.words:
+                        return True
+        else:
+            if word in self.words:
+                return True
+        return False
+
+""" Approach 3: Trie + Iterative DFS"""
+
+
+class WordDictionary:
+
+    class Node:
+        def __init__(self):
+            self.final = False
+            self.children = collections.defaultdict(lambda: WordDictionary.Node())
+
+    def __init__(self):
+        self.root = WordDictionary.Node()
+
+    def addWord(self, word: str) -> None:
+        node = self.root
+        for char in word:
+            node = node.children[char]
+        node.final = True
+
+    def search(self, word: str) -> bool:
+        stack = [(0, self.root)]
+        while stack:
+            pos, node = stack.pop()
+            if pos == len(word):
+                if node.final:
+                    return True
+            elif word[pos] == '.':
+                for child in node.children.values():
+                    stack.append((pos+1, child))
+            else:
+                if child := node.children.get(word[pos]):
+                    stack.append((pos+1, child))
+        return False
+
+
+
+
+
+// C#, Trie (children - array of 26) + Recursion on Wildcard
+// 330ms 99%
+public class WordDictionary
+{
+    private const int AlphabetSize = 26;
+    private const char AlphabetStart = 'a';
+    private const char Wildcard = '.';
+    private readonly Node Root = new();
+
+    public void AddWord(string word)
+    {
+        var node = Root;
+        foreach (char letter in word)
+        {
+            int charCode = letter - AlphabetStart;
+            if (node.Children[charCode] == null)
+                node.Children[charCode] = new();
+            node = node.Children[charCode];
+        }
+        node.IsEndOfWord = true;
+    }
+
+    public bool Search(string word) => DoesSuffixExist(word, Root);
+
+    private bool DoesSuffixExist(ReadOnlySpan<char> suffix, Node startNode)
+    {
+        var node = startNode;
+        for (int i = 0; i < suffix.Length; i++)
+        {
+            var character = suffix[i];
+            if (character == Wildcard)
+            {
+                foreach (var child in node.Children)
+                    if (child != null && DoesSuffixExist(suffix.Slice(i + 1), child))
+                        return true;
+                return false;
+            }
+            else
+            {
+                int charCode = character - AlphabetStart;
+                var child = node.Children[charCode];
+                if (child == null)
+                    return false;
+                node = child;
+            }
+        }
+        return node.IsEndOfWord;
+    }
+
+
+    private class Node
+    {
+        public Node?[] Children { get; } = new Node?[AlphabetSize];
+        public bool IsEndOfWord { get; set; }
+    }
+}
+
+// C#, Same + (minWordLength, maxWordLength) for entire Trie
+// 380ms 94%
+
+// C#, Trie (children - dict) + Recursion on Wildcard
+// 487ms 73%
+
+
+// C#, Approach 2 (stack, iterative)
+// 527ms 63%
+public class WordDictionary
+{
+    private const int AlphabetSize = 26;
+    private const char AlphabetStart = 'a';
+    private const char Wildcard = '.';
+
+    private readonly Node Root = new();
+
+    public void AddWord(string word)
+    {
+        var node = Root;
+        foreach (char letter in word)
+        {
+            int charCode = letter - AlphabetStart;
+            if (node.Children[charCode] == null)
+                node.Children[charCode] = new();
+            node = node.Children[charCode];
+        }
+        node.IsEndOfWord = true;
+    }
+
+    public bool Search(string word)
+    {
+        var suffixesToFind = new Stack<(ReadOnlyMemory<char> Suffix, Node StartNode)>();
+        suffixesToFind.Push((word.AsMemory(), Root));
+
+        while (suffixesToFind.Count > 0)
+        {
+            var (suffix, node) = suffixesToFind.Pop();
+
+            if (suffix.IsEmpty)
+                if (node.IsEndOfWord) return true;
+                else continue;
+
+            var firstChar = suffix.Span[0];
+            var remainingSuffix = suffix.Slice(1);
+
+            if (firstChar == Wildcard)
+            {
+                foreach (var child in node.Children)
+                    if (child != null)
+                        suffixesToFind.Push((remainingSuffix, child));
+            }
+            else
+            {
+                int charCode = firstChar - AlphabetStart;
+                var child = node.Children[charCode];
+                if (child != null)
+                    suffixesToFind.Push((suffix.Slice(1), child));
+            }
+        }
+        return false;
+    }
+
+
+    private class Node
+    {
+        public Node?[] Children { get; } = new Node?[AlphabetSize];
+        public bool IsEndOfWord { get; set; }
+    }
+}
+
+// C#, Approach 3 (stack, iterative, only for wildcards)
+// 517ms 66%
+public class WordDictionary31
+{
+    private const int AlphabetSize = 26;
+    private const char AlphabetStart = 'a';
+    private const char Wildcard = '.';
+
+    private readonly Node Root = new();
+
+    public void AddWord(string word)
+    {
+        var node = Root;
+        foreach (char letter in word)
+        {
+            int charCode = letter - AlphabetStart;
+            if (node.Children[charCode] == null)
+                node.Children[charCode] = new();
+            node = node.Children[charCode];
+        }
+        node.IsEndOfWord = true;
+    }
+
+    public bool Search(string word)
+    {
+        var suffixesToFind = new Stack<(ReadOnlyMemory<char> Suffix, Node StartNode)>();
+        suffixesToFind.Push((word.AsMemory(), Root));
+
+        while (suffixesToFind.Count > 0)
+        {
+            var (suffix, node) = suffixesToFind.Pop();
+
+            if (suffix.IsEmpty)
+                if (node.IsEndOfWord) return true;
+                else continue;
+
+            for (int i = 0; i < suffix.Length; i++)
+            {
+                var character = suffix.Span[i];
+                if (character == Wildcard)
+                {
+                    var remainingSuffix = suffix.Slice(i + 1);
+                    foreach (var child in node.Children)
+                        if (child != null)
+                            suffixesToFind.Push((remainingSuffix, child));
+                    break;
+                }
+                else
+                {
+                    int charCode = character - AlphabetStart;
+                    var child = node.Children[charCode];
+                    if (child == null)
+                        break;
+                    if (child.IsEndOfWord && i == (suffix.Length - 1))
+                        return true;
+                    node = child;
+                }
+            }
+        }
+        return false;
+    }
+
+
+    private class Node
+    {
+        public Node?[] Children { get; } = new Node?[AlphabetSize];
+        public bool IsEndOfWord { get; set; }
+    }
+}
+
+
+
+// =========================================================================================================
+
+https://leetcode.com/problems/map-sum-pairs
+
+// kotlin
+// 77%, 20ms
+class MapSum {
+
+    private val trie = Trie()
+
+    fun insert(key: String, value: Int) = trie.add(key, value)
+    fun sum(prefix: String): Int = trie.sum(prefix)
+
+    private class Trie {
+
+        private val root = TrieNode()
+
+        fun add(key: String, value: Int) {
+            var node = root
+            val list = ArrayList<TrieNode>()
+            list += node
+            for (char in key) {
+                val childIndex = char - ALPHABET_START
+                val childNode = node.children[childIndex] ?: TrieNode().also {
+                    node.children[childIndex] = it
+                }
+                node = childNode
+                list += node
+            }
+            val dValue = value - node.value
+            if (dValue != 0) {
+                for (n in list) n.sum += dValue
+            }
+            node.value = value
+        }
+
+        fun sum(str: String): Int {
+            var node = root
+            for (char in str) {
+                val childIndex = char - ALPHABET_START
+                node = node.children[childIndex] ?: return 0
+            }
+            return node.sum
+        }
+
+    }
+
+    private class TrieNode {
+        var sum = 0
+        var value = 0
+        val children = Array<TrieNode?>(ALPHABET_SIZE) { null }
+    }
+
+    companion object {
+        private const val ALPHABET_SIZE = 26
+        private const val ALPHABET_START = 'a'
+    }
+}
+
+
+
+
+
+
+// Python
+
+class MapSum:
+
+    class Node:
+        def __init__(self):
+            self.value = None
+            self.children = collections.defaultdict(lambda: MapSum.Node())
+
+    def __init__(self):
+        self.root = MapSum.Node()
+
+    def insert(self, key: str, val: int) -> None:
+        node = self.root
+        for char in key:
+            node = node.children[char]
+        node.value = val
+
+    def sum(self, prefix: str) -> int:
+        def dfs(node) -> int:
+            result = (node.value or 0)
+            result += sum(dfs(child) for child in node.children.values())
+            return result
+
+        prefix_node = self.root
+        for char in prefix:
+            prefix_node = prefix_node.children.get(char)
+            if prefix_node is None:
+                return 0
+
+        return dfs(prefix_node)
+
+
+// C#
+public class MapSum
+{
+    private const int AlphabetSize = 26;
+    private const char AlphabetStart = 'a';
+
+    private readonly Node root = new();
+
+    public void Insert(string key, int value)
+    {
+        var node = root;
+        foreach (char letter in key)
+        {
+            int charCode = letter - AlphabetStart;
+            if (node.Children[charCode] == null)
+                node.Children[charCode] = new();
+            node = node.Children[charCode];
+            node.SubtreeSum += value;
+        }
+
+        if (node.Value == null)
+            node.Value = value;
+        else
+        {
+            int oldValue = node.Value.Value;
+            node = root;
+            foreach (char letter in key)
+            {
+                int charCode = letter - AlphabetStart;
+                node = node.Children[charCode];
+                node.SubtreeSum -= oldValue;
+            }
+            node.Value = value;
+        }
+    }
+
+    public int Sum(string prefix)
+    {
+        var node = root;
+        foreach (char letter in prefix)
+        {
+            int charCode = letter - AlphabetStart;
+            if (node.Children[charCode] == null)
+                return 0;
+            node = node.Children[charCode];
+        }
+        return node.SubtreeSum;
+    }
+
+    private class Node
+    {
+        public Node?[] Children { get; } = new Node[AlphabetSize];
+        public int? Value { get; set; } = null;
+        public int SubtreeSum { get; set; } = 0;
+    }
+}
+
+Approaches:
+* Trie:
+    * Optimistic strategy:
+        * hope that key doesn't exist,
+        * 1st pass - in every node subtreeSum += value
+        * if key indeed doesn't exist - exit, otherwise - 2nd pass to correct subtreeSum
+        * Benefit - 1 pass at best
+    * Pessimistic strategy:
+        * assume key already exists
+        * 1st pass - don't update subtreeSum, simply get to the node corresponding to the end of the key
+        * 2nd pass - in every node update the value of subtreeSum
+        * Benefit - value of subtreeSum is updated only once in each node
+* Dict of keys and all their prefixes (incremental hash)
+* Sorted array of keys and their values. LowerBound. +Calc sums on the fly (linear). Or prefix sums array (constant time)
+* Sorted Dict
+* Sorted Dict + Segment Tree - ?
+
+
+
+
+
+
+
+// =====================================================================================================================
+
+17:09
+
+1086. High Five
+https://leetcode.com/problems/high-five
+Given a list of the scores of different students, items[][], where items[i] = [ID_i, score_i]
+represents one score from a student with ID_i, calculate each student's top five average.
+
+Return the answer as an array of pairs result,
+where result[j] = [ID_j, topFiveAverage_j]
+represents the student with ID_j and their top five average.
+Sort result by ID_j in increasing order.
+
+A student's top five average is calculated by taking the sum of their top five scores
+and dividing it by 5 using integer division.
+
+1 <= items.length <= 1000
+1 <= ID_i <= 1000
+0 <= score_i <= 100
+For each ID_i, there will be at least five scores.
+
+output: [[studentId, avgScoreTop5]]
+[[0,..], [1,..], ...]
+
+[1, 5]
+[1, 3]
+[1, 2]
+[1, 1]
+[2, 1]
+...
+
+array of students
+hash table of students
+key - studentId
+value - list / minheap
+
+Time:
+    array + list (Quick select) — O(IdsRange + n) avg
+    hashtable + list - O(n + IDs*log(IDs)) avg
+    array + minheap - (IdsRange + n*log(5))
+    hashtable + minheap - O(IDs*log(IDs) + n*log(5))
+
+Space:
+    array + list (Quick select) — O(IdsRange + n)
+    hashtable + list - O(n)
+    array + minheap - (IdsRange + n) worst, (IdsRange) best
+    hashtable + minheap - O(n) worst, O(1) best
+
+Heap sort
+    Time O(n*log(n))
+    Space O(1)
+
+// hashtable + minheap
+class Solution {
+    fun foo(items: Array<IntArray>): Array<IntArray> {
+        val map = LinkedHashMap<Int, PriorityQueue<Int>>()
+        for (item in items) {
+            val studentId = item[0]
+            val score = item[1]
+            val minHeap = map[studentId] ?: PriorityQueue<Int>().also { map[studentId] = it }
+            if (minHeap.peek() <= score || minHeap.size < 5) minHeap.add(score)
+            if (minHeap.size > 5) minHeap.poll()
+        }
+        val list = map.map { (studentId, minHeap) -> intArrayOf(studentId, getAverageScore(minHeap)) }
+        return list.sort { it[0] }
+    }
+
+    fun getAverageScore(heap: PriorityQueue<Int>): Int {
+        val size = heap.size
+        var sum = 0
+        while (heap.isNotEmpty()) sum += heap.poll()
+        return sum / size
+    }
+
+}
+
+// ==============================================================================================================
+
+Given an integer array nums sorted in non-decreasing order and an integer k,
+return true if this array can be divided into one or more disjoint
+increasing subsequences of length at least k, or false otherwise.
+
+Example 1:
+Input: nums = [1,2,2,3,3,4,4], k = 3
+Output: true
+Explanation: The array can be divided into two subsequences [1,2,3,4] and [2,3,4] with lengths at least 3 each.
+
+Example 2:
+Input: nums = [5,6,6,7,8], k = 3
+Output: false
+Explanation: There is no way to divide the array using the conditions required.
+
+Input: nums = [5,6,7,8], k = 3
+Output: true
+
+1 <= k <= nums.length <= 10^5
+
+
+
+function canDivideIntoSubsequences(nums: number[], k: number): boolean {
+
+};
+
+
+[1,2,2,2,2,3,3,4,5,6,7,8,9,9]  k = 3
+                           ^
+length = 14
+
+target = 9
+counter = 4
+candidatCounter = 2
+
+
+[2,3,9]
+[2,3,9]
+[2,1,7]
+[2,5,6]
+
+14\3 = 4,...
+
+
+
+function canDivideIntoSubsequences(nums: number[], k: number): boolean {
+    let maxCounter = 1;
+    let target: number = nums[0];
+    let candidateCounter = 1;
+
+    for(let i: number = 1; i < nums.length; i++){
+
+      if(nums[i]===target){
+        candidateCounter++;
+        continue;
+      }
+
+      if(candidateCounter>maxCounter){
+        maxCounter = candidateCounter;
+      }
+
+      candidateCounter = 1;
+      target = nums[i];
+
+    }
+
+      if(candidateCounter>maxCounter){
+        maxCounter = candidateCounter;
+      }
+
+    return Math.ceil(nums.lenth \ maxCounter) >= k;
+
+};
+
+[1,1,1,1,...] k = 2
+maxCounter = 4
+
+
+
+
+function canDivideIntoSubsequences(nums: number[], k: number): boolean {
+  const maxValidCounter = Math.floor(nums.length \ k);
+
+
+    let target: number = nums[0];
+    let candidateCounter = 1;
+
+    for(let i: number = 1; i < nums.length; i++) {
+
+
+
+      if(nums[i]===target){
+        candidateCounter++;
+
+        if(maxValidCounter<candidateCounter){
+           return false;
+        }
+
+        continue;
+      }
+
+
+      candidateCounter = 1;
+      target = nums[i];
+
+    }
+
+    return true;
+
+};
+
+
+[1,1,1,1]
+https://leetcode.com/problems/divide-array-into-increasing-sequences/
+
+
+// ========================================================================================================
+
+https://leetcode.com/problems/minimum-time-difference
+
+Given a list of 24-hour clock time points in "HH:MM" format,
+return the minimum minutes difference between any two time-points in the list.
+2 <= timePoints.length <= 2 * 10^4
+
+23:59, 00:01 => 2
+
+ => |-------------------| =>
+       ^     ^        ^
+       a     b        c
+
+dist = min(max(a,b) - min(a,b), ...)
+
+"""
+Approach 1: Brute-force enum of all pairs
+TC: O(N^2)
+MC: O(1)
+"""
+
+"""
+Approach 2: Sort the points, iterate from left to right, track min distance, account for circularity
+TC: O(N log N + N) => O(N log N) for sorting + full sweep
+MC: O(N) if sort out-of-place, O(log N) if sort in-place with
+"""
+
+"""
+60*24 600+600+60*4=1200+240=1440
+Approach 3: Counting-Sort
+TC: O(R + N + N) for counting-sort + full-sweep
+MC: O(Range) for sorting
+"""
+
+
+"""
+Approach 3: Counting-Sort if N > (1440 * log 1440), In-place sort otherwise
+"""
+
+MINS_PER_DAY = 1440
+
+def parse(val: str) -> int:
+  h, m = map(int, val1.split(':'))
+  return h * 60 + m
+
+def distance(val1: int, val2: int) -> int:
+  return v2 - v1
+
+def find_min_diff(input: List[str]) -> int:
+    input.sort() # inplace
+    result = math.inf
+    for idx in range(1, len(input)):
+      val1 = input[idx-1]
+      val2 = input[idx]
+      result = min(result, distance(parse(val1), parse(val2)))
+    result = min(result, distance(parse(input[-1]), MINS_PER_DAY+parse(input[0])))
+    return result
+
+
+
+
+// ================================================================================================
+
+Given an integer n, return all the structurally unique BST's (binary search trees),
+which has exactly n nodes of unique values from 1 to n. Return the answer in any order.
+
+n < 9
+
+n = 3 => values: 1, 2, 3 =>
+key - (1,3)
+value - refs to 5 roots
+    3
+   /
+  2
+ /
+1
+
+    3
+   /
+  1
+   \
+    2
+
+  2
+ / \
+1   3
+
+1
+ \
+  2
+   \
+    3
+
+1
+ \
+  3
+ /
+2
+
+n = 5, values = 1, ..., 5
+                ^
+                root
+
+1
+ \
+  create a bunch of subtrees from [2,3,4,5]
+                                     ^
+
+ n
+1 n-1   2 n-2
+Time - O(n!)
+Space - O(n)
+
+n = 5
+cache:
+key - start = 1, end = 5
+
+3 - root
+left 1,2 key - start = 1, end = 2
+right 4,5 key - start = 4, end = 5
+
+cache:
+key - (start, end)
+value - treeRoot[]
+2D array or hashtable
+
+root[] BuildTrees(start, end)
+ check cache
+ for loop (select root)
+  BuildTrees(start, root - 1) <- put into array
+  BuildTrees(root + 1, end) <- put into array
+ put array into cache
+ return array
+
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     public int val;
+ *     public TreeNode left;
+ *     public TreeNode right;
+ *     public TreeNode(int val=0, TreeNode left=null, TreeNode right=null) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+public class Solution
+{
+    public IList<TreeNode> AllPossibleTrees(int n)
+    {
+        var subtrees = new Dictionary<(int, int), List<TreeNode>>();
+        return BuildSubtrees(1, n);
+
+        List<TreeNode> BuildTrees(int startValue, int endValue)
+        {
+            if (startValue > endValue)
+                return new();
+            if (subtrees.TryGetValue((startValue, endValue), out var result))
+                return result;
+
+            result = new List<TreeNode>();
+            for (int rootValue = startValue; rootValue <= endValue; rootValue++)
+            {
+                var leftSubtrees = BuildSubtrees(startValue, rootValue - 1);
+                var rightSubtrees = BuildSubtrees(rootValue + 1, endValue);
+
+                if (leftSubtrees.Count == 0 && rightSubtrees.Count == 0)
+                    result.Add(new TreeNode(rootValue));
+                else if (leftSubtrees.Count == 0)
+                    foreach (var rightSubtree in rightSubtrees)
+                        result.Add(new TreeNode(rootValue, null, rightSubtree));
+                else if (rightSubtrees.Count == 0)
+                    foreach (var leftSubtree in leftSubtrees)
+                        result.Add(new TreeNode(rootValue, leftSubtree, null));
+                else
+                {
+                    foreach (var leftSubtree in leftSubtrees)
+                        foreach (var rightSubtree in rightSubtrees)
+                            result.Add(new TreeNode(rootValue, leftSubtree, rightSubtree))
+                }
+            }
+            subtrees[(startValue, endValue)] = result;
+            return result;
+        }
+    }
+}
+
+123
+132
+
+213
+231 <- 231 permutation pattern
+https://en.wikipedia.org/wiki/Stack-sortable_permutation
+
+Stack-sortable permutations may also be translated directly to and from (unlabeled) binary trees,
+another combinatorial class whose counting function is the sequence of Catalan numbers
+
+312
+321
+
+
+
+5|123|789
+
+5|1728 <- invalid
+
+     5
+   /  \
+123    7
+
+123
+
+1
+ \
+  23
+
+23
+
+2
+ \
+  3
+
+
+                 5
+               /  \
+              1    7
+              \
+               2
+                \
+                 3
+
+
+
+
+
+//--------------------------------------------------------------------------------------------------
+
+https://leetcode.com/problems/design-file-system
+
+1166. Design File System
+
+You are asked to design a file system that allows you to create new paths and associate them with different values.
+
+The format of a path is one or more concatenated strings of the form:
+/ followed by one or more lowercase English letters.
+For example, "/leetcode" and "/leetcode/problems" are valid paths while an empty string "" and "/" are not.
+
+Implement the FileSystem class:
+bool createPath(string path, int value)
+    Creates a new path and associates a value to it if possible and returns true.
+    Returns false if the path already exists or its parent path doesn't exist.
+int get(string path)
+    Returns the value associated with path or returns -1 if the path doesn't exist.
+
+Example 1:
+
+Input:
+["FileSystem","createPath","get"]
+[[],["/a",1],["/a"]]
+Output:
+[null,true,1]
+Explanation:
+FileSystem fileSystem = new FileSystem();
+
+fileSystem.createPath("/a", 1); // return true
+fileSystem.get("/a"); // return 1
+
+
+Example 2:
+
+Input:
+["FileSystem","createPath","createPath","get","createPath","get"]
+[[],["/leet",1],["/leet/code",2],["/leet/code"],["/c/d",1],["/c"]]
+
+Output:
+[null,true,true,2,false,-1]
+
+Explanation:
+FileSystem fileSystem = new FileSystem();
+fileSystem.createPath("/leet", 1); // return true
+fileSystem.createPath("/leet/code", 2); // return true
+fileSystem.get("/leet/code"); // return 2
+fileSystem.createPath("/c/d", 1); // return false because the parent path "/c" doesn't exist.
+fileSystem.get("/c"); // return -1 because this path doesn't exist.
+
+
+Constraints:
+2 <= path.length <= 100
+1 <= value <= 10^9
+Each path is valid and consists of lowercase English letters and '/'.
+At most 10^4 calls in total will be made to createPath and get.
+
+
+https://leetcode.com/problems/design-file-system
+
+Approaches:
+1. HashMap: key - folderName, value - (value, children - HashMap)
+2. Tree: Node contains HashMap (key - folderName, value - child node)
+3. HashMap: key - path, value - value
+4. Trie
+5. Tree: Node contains CompressedTrie (key - folderName, value - child node)
+
+"/a/b/c/d" | "/e"
+map["/a/b/c/d/e"] = value
+
+class HashMapKey(str, ...) {
+    override fun hashCode(...) = hashCode(str, 0..n)
+    override fun equals(...) = ...
+}
+HashMap<HashMapKey, ...>
+
+
+createPath(/a/b/cade)
+                 ^
+
+createPath(/a/b/cad/e)
+                ^
+
+/abcdefghj....xz/a
+  ^
+                 ^
+                ^
+/a
+
+/a/b/ca
+      ^
+
+ root
+    \
+     a
+      \
+       b
+        \
+         c
+        / \
+       x
+            \
+
+// kotlin, trie (87%, 137ms)
+class FileSystem() {
+
+    private val trie = Trie()
+
+    fun createPath(path: String, value: Int): Boolean {
+        return trie.add(path, value)
+    }
+
+    fun get(path: String): Int {
+        return trie.get(path)
+    }
+
+    private class Trie {
+
+        private val root: TrieNode = TrieNode()
+
+        fun add(path: String, value: Int): Boolean {
+            val (parentNode, lastPart) = getParentNodeOrNull(path)
+            if (parentNode == null) return false
+            if (lastPart in parentNode.children) return false
+            val childNode =  TrieNode().apply { parentNode.children[lastPart] = this }
+            childNode.value = value
+            return true
+        }
+
+        private fun getParentNodeOrNull(path: String): Pair<TrieNode?, String> {
+            val sb = StringBuilder()
+            var node: TrieNode = root
+            for (index in 1..path.lastIndex) {
+                val char = path[index]
+                if (char == '/') {
+                    val childNode = node.children[sb.toString()] ?: return null to ""
+                    sb.clear()
+                    node = childNode
+                } else {
+                    sb.append(char)
+                }
+            }
+            if (sb.isEmpty()) return null to ""
+            return node to sb.toString()
+        }
+
+        fun get(path: String): Int {
+            val (parentNode, lastPart) = getParentNodeOrNull(path)
+            if (parentNode == null) return -1
+            val childNode = parentNode.children[lastPart] ?: return -1
+            return childNode.value
+        }
+
+        private class TrieNode {
+            var value = -1
+            val children = HashMap<String, TrieNode>()
+        }
+    }
+
+}
+
+
+// C#, HashTable (key - path, value - value)
+// 6ms 100%
+public class FileSystem
+{
+    private const int None = -1;
+    private const char Separator = '/';
+
+    private readonly Dictionary<string, int> path2ValueMap = new() {
+        [string.Empty] = None
+    };
+
+    public bool CreatePath(string path, int value)
+    {
+        var parentPath = path.Substring(0, path.LastIndexOf(Separator));
+        if (!path2ValueMap.ContainsKey(parentPath))
+            return false;
+
+        return path2ValueMap.TryAdd(path, value);
+    }
+
+    public int Get(string path)
+    {
+        return path2ValueMap.TryGetValue(path, out int value) ? value : None;
+    }
+}
+
+// C#, Prefix Tree (children - dict: key - foldername, value - child) + String.Split
+// 27ms 63%
+public class FileSystem
+{
+    private const int None = -1;
+    private const char Separator = '/';
+
+    private readonly Node root = new();
+
+    public bool CreatePath(string path, int value)
+    {
+        var pathParts = path.Split(Separator);
+        var node = root;
+        for (int i = 1; i < pathParts.Length; i++)
+        {
+            string part = pathParts[i];
+            if (!node.Children.TryGetValue(part, out var child))
+            {
+                if (i != (pathParts.Length - 1))
+                    return false;
+                child = new();
+                child.Value = value;
+                node.Children[part] = child;
+                return true;
+            }
+            node = child;
+        }
+        if (node.Value != None)
+            return false;
+        node.Value = value;
+        return true;
+    }
+
+    public int Get(string path)
+    {
+        var pathParts = path.Split(Separator);
+        var node = root;
+        for (int i = 1; i < pathParts.Length; i++)
+        {
+            string part = pathParts[i];
+            if (!node.Children.TryGetValue(part, out var child))
+                return None;
+            node = child;
+        }
+        return node.Value;
+    }
+
+
+    private class Node
+    {
+        public Dictionary<string, Node> Children { get; } = new();
+        public int Value { get; set; } = None;
+    }
+}
+
+// C# Prefix Tree (children - dict: key - substring, value - child)
+// + Substring class (with GetHashCode, Equals, etc.)
+// + Splitting string (Iterator + 2 pointers)
+// 80ms 5%
+public class FileSystem
+{
+    private const int None = -1;
+    private const char Separator = '/';
+
+    private readonly Node root = new();
+
+    public bool CreatePath(string path, int value)
+    {
+        var pathParts = SplitPath(path, Separator).ToList();
+        var node = root;
+        for (int i = 0; i < pathParts.Count; i++)
+        {
+            var part = pathParts[i];
+            if (!node.Children.TryGetValue(part, out var child))
+            {
+                if (i != (pathParts.Count - 1))
+                    return false;
+                child = new();
+                child.Value = value;
+                node.Children[part] = child;
+                return true;
+            }
+            node = child;
+        }
+        if (node.Value != None)
+            return false;
+        node.Value = value;
+        return true;
+    }
+
+    public int Get(string path)
+    {
+        var node = root;
+        foreach (var part in SplitPath(path, Separator))
+        {
+            if (!node.Children.TryGetValue(part, out var child))
+                return None;
+            node = child;
+        }
+        return node.Value;
+    }
+
+    private static IEnumerable<Substring> SplitPath(string path, char separator)
+    {
+        int startIndex = 1;
+        bool hasReachedEnd = false;
+        while (true)
+        {
+            int endIndex = path.IndexOf(separator, startIndex + 1);
+            if (endIndex == -1)
+            {
+                hasReachedEnd = true;
+                endIndex = path.Length;
+            }
+
+            yield return new Substring(path, startIndex, endIndex - startIndex);
+            if (hasReachedEnd)
+                yield break;
+            startIndex = endIndex + 1;
+        }
+    }
+
+
+    private class Node
+    {
+        public Dictionary<Substring, Node> Children { get; } = new();
+        public int Value { get; set; } = None;
+    }
+
+    private class Substring : IEquatable<Substring>
+    {
+        private readonly string source;
+        private readonly int offset;
+        private readonly int length;
+        private readonly int hashCode;
+
+        public Substring(string source, int offset, int length)
+        {
+            this.source = source;
+            this.offset = offset;
+            this.length = length;
+
+            hashCode = 0;
+            for (int i = 0; i < length; i++)
+                hashCode = HashCode.Combine(hashCode, source[offset + i]);
+        }
+
+        public override int GetHashCode() => hashCode;
+
+        public bool Equals(Substring? other)
+        {
+            if (other == null)
+                return false;
+            if (length != other.length)
+                return false;
+
+            var thisSpan = source.AsSpan(offset, length);
+            var otherSpan = other.source.AsSpan(other.offset, other.length);
+            return thisSpan.SequenceEqual(otherSpan);
+        }
+
+        public override string ToString()
+            => string.Create(length, 0, (output, _) => source.AsSpan(offset, length).CopyTo(output));
+    }
+}
+
+
+
+/// Python
+
+class Trie:
+    class Node:
+        def __init__(self, value):
+            self.children = {}
+            self.value = value
+
+    def __init__(self):
+        self.root = Trie.Node(0)
+        self.root.children[""] = Trie.Node(0)
+        self.value = None
+
+    def find(self, parts: List[str]) -> Node | None:
+        node = self.root
+        for part in parts:
+            node = node.children.get(part)
+            if node is None:
+                break
+        return node
+
+class FileSystem:
+
+    def __init__(self):
+        self.trie = Trie()
+
+    def verify(self, path):
+        ## TODO: add path checks here
+        return True
+
+    def createPath(self, path: str, value: int) -> bool:
+        if not self.verify(path):
+            return False
+        parts = path.split("/")
+        prefix, name = parts[:len(parts)-1], parts[-1]
+        node = self.trie.find(prefix)
+        if not node:
+            return False
+        if name in node.children:
+            return False
+        node.children[name] = Trie.Node(value)
+        return True
+
+    def get(self, path: str) -> int:
+        node = self.trie.find(path.split("/"))
+        return node.value if node else -1
+
+
+// =========================================================================================
+
+https://leetcode.com/problems/design-in-memory-file-system
+
+
+
+588. Design In-Memory File System
+Design a data structure that simulates an in-memory file system.
+
+Implement the FileSystem class:
+
+FileSystem()
+    Initializes the object of the system.
+
+List<String> ls(String path)
+    If path is a file path, returns a list that only contains this file's name.
+    If path is a directory path, returns the list of file and directory names in this directory.
+    The answer should in lexicographic order.
+
+void mkdir(String path)
+    Makes a new directory according to the given path.
+    The given directory path does not exist.
+    If the middle directories in the path do not exist, you should create them as well.
+
+void addContentToFile(String filePath, String content)
+    If filePath does not exist, creates that file containing given content.
+    If filePath already exists, appends the given content to original content.
+
+String readContentFromFile(String filePath)
+    Returns the content in the file at filePath.
+
+
+Input
+["FileSystem", "ls", "mkdir", "addContentToFile", "ls", "readContentFromFile"]
+[[], ["/"], ["/a/b/c"], ["/a/b/c/d", "hello"], ["/"], ["/a/b/c/d"]]
+Output
+[null, [], null, null, ["a"], "hello"]
+
+Explanation
+FileSystem fileSystem = new FileSystem();
+fileSystem.ls("/");                         // return []
+fileSystem.mkdir("/a/b/c");
+fileSystem.addContentToFile("/a/b/c/d", "hello");
+fileSystem.ls("/");                         // return ["a"]
+fileSystem.readContentFromFile("/a/b/c/d"); // return "hello"
+
+Constraints:
+1 <= path.length, filePath.length <= 100
+path and filePath are absolute paths which begin with '/' and do not end with '/' except that the path is just "/".
+You can assume that all directory names and file names only contain lowercase letters,
+and the same names will not exist in the same directory.
+You can assume that all operations will be passed valid parameters,
+and users will not attempt to retrieve file content or list a directory or file that does not exist.
+You can assume that the parent directory for the file in addContentToFile will exist.
+1 <= content.length <= 50
+At most 300 calls will be made to ls, mkdir, addContentToFile, and readContentFromFile.
+
+
+https://leetcode.com/problems/design-in-memory-file-system
+
+Approaches:
+1. FS Hierarchy as Tree + Children as HashMap, on-the-fly Sort
+2. FS Hierarchy as Tree + Children as HashMap, lazy Sort & cache
+3. FS Hierarchy as Tree + Children as SortedDict (keys to array on-the-fly or lazy & cache)
+4. FS Hierarchy as Tree + Children as Trie (ideally - compressed)
+5. FS Hierarchy as Tree + Children as DynamicArray, lazy Sort & cache
+6. FS Hierarchy as Tree + Children as Sorted LinkedList & LinearSearch
+7. FS Hierarchy as Tree + Children as Sorted DynamicArray & BinarySearch
+8. FS Hierarchy as HashMap + Children as DynamicArray, lazy Sort & cache
+9. FS Hierarchy as HashMap + Children as HashSet, on-the-fly Sort
+10. FS Hierarchy as HashMap + Children as HashSet, lazy Sort & cache
+11. FS Hierarchy as HashMap + Children as Sorted LinkedList & LinearSearch
+12. FS Hierarchy as HashMap + Sorted DynamicArray & BinarySearch
+13. FS Hierarchy as HashMap + Children as Trie (ideally - compressed)
+14. FS Hierarchy as Tree + Children as SortedSet (to array on-the-fly or lazy & cache)
+15. Trie
+
+File Content:
+* String
+* Dynamic Array of strings, on-the-fly Concat
+* Dynamic Array of strings, lazy Concat & cache
+* StringBuilder (?)
+
+Design (File vs Folder):
+* Single class Node
+* Inheritance: FileNode class & FolderNode class
+
+"/a/b/c/d":
+"/": ["a"]
+"/a": ["b"]
+"/a/b": ["c"]
+"/a/b/c": ["d"]
+"/a/b/c/d": []
+
+
+
+// kotlin, trie, 100%, 69ms
+class FileSystem() {
+
+    private val trie = Trie()
+
+    fun ls(path: String): List<String> {
+        return trie.getChildrenNodesKeys(path)
+    }
+
+    fun mkdir(path: String) {
+        trie.createNode(path)
+    }
+
+    fun addContentToFile(filePath: String, content: String) {
+        trie.appendValue(filePath, content)
+    }
+
+    fun readContentFromFile(filePath: String): String {
+        return trie.getValue(filePath)
+    }
+
+    private class Trie {
+        private val root = TrieNode("")
+
+        fun getChildrenNodesKeys(path: String): List<String> {
+            val node = getNodeOrNull(path) ?: return emptyList()
+            if (node.str.isNotEmpty()) {
+                return listOf(node.filename)
+            } else {
+                val list = ArrayList<String>(node.children.size)
+                for ((key, _) in node.children) {
+                    list += key
+                }
+                list.sort()
+                return list
+            }
+        }
+
+        fun appendValue(path: String, content: String) {
+            createNode(path).str.append(content)
+        }
+
+        fun getValue(path: String): String {
+            val node = createNode(path)
+            return node.str.toString()
+        }
+
+        fun createNode(path: String): TrieNode {
+            if (path == "/") return root
+
+            val parts = path.split('/')
+            var node = root
+            for (partIndex in 1..parts.lastIndex) {
+                val part = parts[partIndex]
+                val childNode = node.children[part] ?: TrieNode(part).also {
+                    node.children[part] = it
+                }
+                node = childNode
+            }
+            return node
+        }
+
+        fun getNodeOrNull(path: String): TrieNode? {
+            if (path == "/") return root
+
+            val parts = path.split('/')
+            var node = root
+            for (partIndex in 1..parts.lastIndex) {
+                val part = parts[partIndex]
+                val childNode = node.children[part] ?: return null
+                node = childNode
+            }
+            return node
+        }
+    }
+
+    private class TrieNode(val filename: String) {
+        var str: StringBuilder = StringBuilder()
+        val children = LinkedHashMap<String, TrieNode>()
+    }
+
+}
+
+
+// C#, FS Hierarchy as Tree + Children as Dict (on-the-fly sort) + File Content as String
+// 9ms 77%
+public class FileSystem
+{
+    private const char Separator = '/';
+    private readonly Node root = new FolderNode();
+
+    public IList<string> Ls(string path)
+    {
+        var pathParts = path.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+
+        var node = root;
+        foreach (string part in pathParts)
+            node = (node as FolderNode).Children[part];
+
+        if (node is FileNode)
+            return [pathParts.Last()];
+        else
+        {
+            var keys = (node as FolderNode).Children.Keys.ToArray();
+            Array.Sort(keys);
+            return keys;
+        }
+    }
+
+    public void Mkdir(string path)
+    {
+        var folderNames = path.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+
+        var folderNode = (FolderNode)root;
+        foreach (string folderName in folderNames)
+        {
+            if (!folderNode.Children.TryGetValue(folderName, out var child))
+            {
+                child = new FolderNode();
+                folderNode.Children[folderName] = child;
+            }
+            folderNode = (FolderNode)child;
+        }
+    }
+
+    public void AddContentToFile(string filePath, string content)
+    {
+        var pathParts = filePath.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+
+        var folderNode = (FolderNode)root;
+        for (int i = 0; i < pathParts.Length - 1; i++)
+        {
+            string folderName = pathParts[i];
+            folderNode = (FolderNode)folderNode.Children[folderName];
+        }
+
+        string fileName = pathParts.Last();
+        if (folderNode.Children.TryGetValue(fileName, out var fileNode))
+            (fileNode as FileNode).AppendContent(content);
+        else
+            folderNode.Children[fileName] = new FileNode(content);
+    }
+
+    public string ReadContentFromFile(string filePath)
+    {
+        var pathParts = filePath.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+
+        var node = root;
+        foreach (string part in pathParts)
+            node = (node as FolderNode).Children[part];
+
+        return (node as FileNode).Content;
+    }
+
+
+    private class Node { }
+
+    private class FolderNode : Node
+    {
+        public Dictionary<string, Node> Children { get; } = new();
+    }
+
+    private class FileNode(string content) : Node
+    {
+        public string Content { get; private set; } = content;
+
+        public void AppendContent(string newContent) => Content += newContent;
+    }
+}
+
+//-------------------------------------------------------------
+
+https://leetcode.com/problems/flip-equivalent-binary-trees
+
+// kotlin, 1ms
+class Solution1 {
+    fun flipEquiv(root1: TreeNode?, root2: TreeNode?): Boolean {
+        val (bitset, isAnyBitSet) = getBitset(root1)
+        if (!checkMatch(root2, bitset, isAnyBitSet)) return false
+        return isEqual(root1, root2)
+    }
+
+    private fun isEqual(root1: TreeNode?, root2: TreeNode?): Boolean {
+        if (root1 == null) return root2 == null
+        if (root2 == null) return false
+        if (root1.`val` != root2.`val`) return false
+
+        if (isEqual(root1.left, root2.left) && isEqual(root1.right, root2.right)) {
+            return true
+        }
+        if (isEqual(root1.left, root2.right) && isEqual(root1.right, root2.left)) {
+            return true
+        }
+        return false
+    }
+
+    private fun getBitset(root: TreeNode?): Pair<BooleanArray, Boolean> {
+        val bitset = BooleanArray(100)
+        if (root == null) return bitset to false
+        val queue = LinkedList<TreeNode>()
+        var isAnyBitSet = false
+        queue += root
+        while (queue.isNotEmpty()) {
+            val node = queue.poll()
+            bitset[node.`val`] = true
+            isAnyBitSet = true
+            node.left?.let { queue += it }
+            node.right?.let { queue += it }
+        }
+        return bitset to isAnyBitSet
+    }
+
+    private fun checkMatch(
+        root: TreeNode?,
+        bitset: BooleanArray,
+        isAnyBitSet: Boolean
+    ): Boolean {
+        if (root == null) return !isAnyBitSet
+
+        val queue = LinkedList<TreeNode>()
+        queue += root
+        while (queue.isNotEmpty()) {
+            val node = queue.poll()
+            if (!bitset[node.`val`]) return false
+            node.left?.let { queue += it }
+            node.right?.let { queue += it }
+        }
+        return true
+    }
+}
+
+//kotlin, 1ms
+class Solution2 {
+    fun flipEquiv(root1: TreeNode?, root2: TreeNode?): Boolean {
+        val (bitset, isAnyBitSet) = getBitset(root1)
+        if (!checkMatch(root2, bitset, isAnyBitSet)) return false
+        val cache = HashMap<Pair<Int, Int>, Boolean>() // TODO try bit matrix
+        return isEqual(root1, root2, cache)
+    }
+
+    private fun isEqual(
+        root1: TreeNode?,
+        root2: TreeNode?,
+        cache: HashMap<Pair<Int, Int>, Boolean>
+    ): Boolean {
+        if (root1 == null) return root2 == null
+        if (root2 == null) return false
+        if (root1.`val` != root2.`val`) return false
+        cache[root1.`val` to root2.`val`]?.let { return it }
+        cache[root2.`val` to root1.`val`]?.let { return it }
+
+        if (isEqual(root1.left, root2.left, cache) && isEqual(root1.right, root2.right, cache)) {
+            cache[root1.`val` to root2.`val`] = true
+            return true
+        }
+        if (isEqual(root1.left, root2.right, cache) && isEqual(root1.right, root2.left, cache)) {
+            cache[root1.`val` to root2.`val`] = true
+            return true
+        }
+        cache[root1.`val` to root2.`val`] = false
+        return false
+    }
+
+    private fun getBitset(root: TreeNode?): Pair<BooleanArray, Boolean> {
+        val bitset = BooleanArray(100)
+        if (root == null) return bitset to false
+        val queue = LinkedList<TreeNode>()
+        var isAnyBitSet = false
+        queue += root
+        while (queue.isNotEmpty()) {
+            val node = queue.poll()
+            bitset[node.`val`] = true
+            isAnyBitSet = true
+            node.left?.let { queue += it }
+            node.right?.let { queue += it }
+        }
+        return bitset to isAnyBitSet
+    }
+
+    private fun checkMatch(
+        root: TreeNode?,
+        bitset: BooleanArray,
+        isAnyBitSet: Boolean
+    ): Boolean {
+        if (root == null) return !isAnyBitSet
+
+        val queue = LinkedList<TreeNode>()
+        queue += root
+        while (queue.isNotEmpty()) {
+            val node = queue.poll()
+            if (!bitset[node.`val`]) return false
+            node.left?.let { queue += it }
+            node.right?.let { queue += it }
+        }
+        return true
+    }
+}
+
+
+//--------------------------------
+
+// C#, Iterative (Stack)
+// Time - O(n1 + n2)
+// Space - O(Min(height1, height2)) => O(Min(n1, n2)) worst
+public static class EquivalentTreeDetector10
+{
+    public static bool AreFlipEquivalent(TreeNode? rootA, TreeNode? rootB)
+    {
+        if (rootA?.val != rootB?.val)
+            return false;
+
+        var subtreesToCompare = new Stack<(TreeNode? A, TreeNode? B)>(); // Pairs, either both null, or both have the same value
+        subtreesToCompare.Push((rootA, rootB));
+        while (subtreesToCompare.Count > 0)
+        {
+            var (a, b) = subtreesToCompare.Pop();
+            if (a == null)
+                continue;
+
+            if (a.left?.val == b.left?.val && a.right?.val == b.right?.val)
+            {
+                subtreesToCompare.Push((a.left, b.left));
+                subtreesToCompare.Push((a.right, b.right));
+            }
+            else if (a.left?.val == b.right?.val && a.right?.val == b.left?.val)
+            {
+                subtreesToCompare.Push((a.left, b.right));
+                subtreesToCompare.Push((a.right, b.left));
+            }
+            else
+                return false;
+        }
+        return true;
+    }
+}
+
+// C#, Recursive
+// Time - O(n1 + n2)
+// Space - O(Min(height1, height2)) => O(Min(n1, n2)) worst
+public static class EquivalentTreeDetector20
+{
+    public static bool AreFlipEquivalent(TreeNode? rootA, TreeNode? rootB)
+    {
+        if (rootA?.val != rootB?.val)
+            return false;
+        if (rootA == null)
+            return true;
+
+        if (rootA.left?.val == rootB.left?.val &&
+            rootA.right?.val == rootB.right?.val &&
+            AreFlipEquivalent(rootA.left, rootB.left) &&
+            AreFlipEquivalent(rootA.right, rootB.right))
+            return true;
+        if (rootA.left?.val == rootB.right?.val &&
+            rootA.right?.val == rootB.left?.val &&
+            AreFlipEquivalent(rootA.left, rootB.right) &&
+            AreFlipEquivalent(rootA.right, rootB.left))
+            return true;
+        return false;
+    }
+}
+
+// C#, Iterative (Queue)
+// Time - O(n1 + n2)
+// Space - O(Min(width1, width2)) => O(Min(n1, n2)) worst
+public static class EquivalentTreeDetector30
+{
+    public static bool AreFlipEquivalent(TreeNode? rootA, TreeNode? rootB)
+    {
+        if (rootA?.val != rootB?.val)
+            return false;
+
+        var subtreesToCompare = new Queue<(TreeNode? A, TreeNode? B)>();
+        subtreesToCompare.Enqueue((rootA, rootB));
+        while (subtreesToCompare.Count > 0)
+        {
+            var (a, b) = subtreesToCompare.Dequeue();
+            if (a == null)
+                continue;
+
+            if (a.left?.val == b.left?.val && a.right?.val == b.right?.val)
+            {
+                subtreesToCompare.Enqueue((a.left, b.left));
+                subtreesToCompare.Enqueue((a.right, b.right));
+            }
+            else if (a.left?.val == b.right?.val && a.right?.val == b.left?.val)
+            {
+                subtreesToCompare.Enqueue((a.left, b.right));
+                subtreesToCompare.Enqueue((a.right, b.left));
+            }
+            else
+                return false;
+        }
+        return true;
+    }
+}
+
+// C#, Morris-Traverse and Sort children + Simultaneous Morris traversal
+// Time - O(n1 + n2)
+// Space - O(1)
+...
+
+
+////// -----------------------
+
+
+Python
+
+# Definition for a binary tree node.
+# class TreeNode:
+#     def __init__(self, val=0, left=None, right=None):
+#         self.val = val
+#         self.left = left
+#         self.right = right
+
+""" Approach 1: Recursive
+TC: O(N), where we do x2 comparisons per each node
+MC: O(H), where H is maximal tree height, for recursive depth
+"""
+
+class Solution:
+    def flipEquiv(self, root1: Optional[TreeNode], root2: Optional[TreeNode]) -> bool:
+        if root1 is None and root2 is None: ## Both are null
+            return True
+        if root1 is None or root2 is None: ## At least one is null
+            return False
+        if root1.val != root2.val: ## Vals are not equal
+            return False
+        ## vals are equal:
+        if self.flipEquiv(root1.left, root2.left) and self.flipEquiv(root1.right, root2.right):
+            return True
+        ## trees are not directly equivalent, check if they are after flip
+        if self.flipEquiv(root1.left, root2.right) and self.flipEquiv(root1.right, root2.left):
+            return True
+        return False
+
+""" Approach 2: Recursive with pre-calculated subtree fingerprinting
+Do the pre-order DFS to calculate flip-invariant hash for each node
+Compare nodes via this hash
+
+l=0        5
+         /   \
+l=1     7     9
+          \
+l=2        1
+
+           5
+         /   \
+        9     7
+             /
+            1
+
+((1)7)5
+
+TC: O(N)
+SC: O(N)
+"""
+
+class Solution:
+    def flipEquiv(self, root1: Optional[TreeNode], root2: Optional[TreeNode]) -> bool:
+
+        def preorder(node):
+            if node is None:
+                return None
+            key1 = preorder(node.left)
+            key2 = preorder(node.right)
+            child_keys = sorted(filter(lambda k: k is not None, [key1, key2]))
+
+            key = ">".join(child_keys + [str(node.val)])
+            return key
+
+        return preorder(root1) == preorder(root2)
+
+
+
+
+////===============
+
+// kotlin, sort children + recursive DFS
+class Solution {
+    fun flipEquiv(root1: TreeNode?, root2: TreeNode?): Boolean {
+        return isEqual(root1, root2)
+    }
+
+    private fun sortChildren(node: TreeNode) {
+        if (node.right == null) return
+        if (node.left == null || node.left!!.`val` > node.right!!.`val`) {
+            val left = node.left
+            node.left = node.right
+            node.right = left
+        }
+    }
+
+    private fun isEqual(
+        root1: TreeNode?,
+        root2: TreeNode?,
+    ): Boolean {
+        if (root1 == null) return root2 == null
+        if (root2 == null) return false
+        if (root1.`val` != root2.`val`) return false
+        sortChildren(root1)
+        sortChildren(root2)
+        return isEqual(root1.left, root2.left) && isEqual(root1.right, root2.right)
+    }
+}
+
+// ===========================================================================================
+
+https://leetcode.com/problems/dota2-senate
+
+// kotlin, 92%, 12ms, 80% space
+class Solution1 {
+    fun predictPartyVictory(senate: String): String {
+        var str = senate
+        val sb = StringBuilder()
+        var result = 0 // positive - R, negative - D
+        var bannedR = 0
+        var bannedD = 0
+        while (str.isNotEmpty()) {
+            for (senator in str) {
+                if (senator == 'R') {
+                    if (bannedR > 0) {
+                        bannedR--
+                    } else {
+                        result++
+                        bannedD++
+                        sb.append(senator)
+                    }
+                } else {
+                    if (bannedD > 0) {
+                        bannedD--
+                    } else {
+                        result--
+                        bannedR++
+                        sb.append(senator)
+                    }
+                }
+            }
+            val newStr = sb.toString()
+            if (newStr == str) break
+            str = newStr
+            sb.clear()
+        }
+        return if (result > 0) "Radiant" else "Dire"
+    }
+}
+
+// kotlin, 97%, 8ms, 98% space
+class Solution2 {
+    fun predictPartyVictory(senate: String): String {
+        val arr = BooleanArray(senate.length) { senate[it] == 'R' }
+        var size = arr.size
+        var result = 0 // positive - R, negative - D
+        var bannedR = 0
+        var bannedD = 0
+        while (size > 0) {
+            var leftIndex = 0
+            for (rightIndex in 0 until size) {
+                val senator = arr[rightIndex]
+                if (senator) {
+                    if (bannedR > 0) {
+                        bannedR--
+                    } else {
+                        result++
+                        bannedD++
+                        arr[leftIndex] = true
+                        leftIndex++
+                    }
+                } else {
+                    if (bannedD > 0) {
+                        bannedD--
+                    } else {
+                        result--
+                        bannedR++
+                        arr[leftIndex] = false
+                        leftIndex++
+                    }
+                }
+            }
+
+            if (leftIndex == size) break
+            size = leftIndex
+        }
+        return if (result > 0) "Radiant" else "Dire"
+    }
+}
+
+
+
+// C#, 2 LinkedLists
+// 9ms 29%
+
+"RDD"
+Greedy
+RadiantIndices: 0
+DireIndices: 1, 2
+
+public static class Dota2Senate20
+{
+    private const char RadiantSenator = 'R';
+    private const char DireSenator = 'D';
+    private const string RadiantParty = "Radiant";
+    private const string DireParty = "Dire";
+
+    public static string PredictPartVictory(string senate)
+    {
+        var radiantIndices = new LinkedList<int>();
+        var direIndices = new LinkedList<int>();
+        for (int i = 0; i < senate.Length; i++)
+            if (senate[i] == RadiantSenator)
+                radiantIndices.AddLast(i);
+            else
+                direIndices.AddLast(i);
+
+        while (radiantIndices.Count > 0 && direIndices.Count > 0)
+        {
+            if (radiantIndices.First.Value < direIndices.First.Value)
+            {
+                int activeRadiantIndex = radiantIndices.First.Value;
+                radiantIndices.RemoveFirst();
+                direIndices.RemoveFirst();
+                radiantIndices.AddLast(activeRadiantIndex + senate.Length);
+            }
+            else
+            {
+                int activeDireIndex = direIndices.First.Value;
+                direIndices.RemoveFirst();
+                radiantIndices.RemoveFirst();
+                direIndices.AddLast(activeDireIndex + senate.Length);
+            }
+        }
+
+        return radiantIndices.Count > 0 ? RadiantParty : DireParty;
+    }
+}
+
+// C#, 2 Queue
+Greedy (voting senator always bans the first opponent after him) +
+Monotonic Queue of indices of Radiant Senators +
+Monotonic Queue of indices of Dire Senators +
+Time - O(n)
+Space - O(n)
+4ms 82%
+public static class Dota2Senate30
+{
+    private const char RadiantSenator = 'R';
+    private const char DireSenator = 'D';
+    private const string RadiantParty = "Radiant";
+    private const string DireParty = "Dire";
+
+    public static string PredictPartyVictory(string senate)
+    {
+        var radiantIndices = new Queue<int>();
+        var direIndices = new Queue<int>();
+
+        for (int i = 0; i < senate.Length; i++)
+            if (senate[i] == RadiantSenator)
+                radiantIndices.Enqueue(i);
+            else
+                direIndices.Enqueue(i);
+
+        while (radiantIndices.Count > 0 && direIndices.Count > 0)
+            if (radiantIndices.Peek() < direIndices.Peek())
+            {
+                int votingRadiantIndex = radiantIndices.Dequeue();
+                direIndices.Dequeue();
+                radiantIndices.Enqueue(votingRadiantIndex + senate.Length);
+            }
+            else
+            {
+                int votingDireIndex = direIndices.Dequeue();
+                radiantIndices.Dequeue();
+                direIndices.Enqueue(votingDireIndex + senate.Length);
+            }
+
+        return radiantIndices.Count > 0 ? RadiantParty : DireParty;
+    }
+}
+
+
+// C#,
+Greedy (voting senator always bans the first opponent after him) +
+Queue of senators +
+Ban lazily using counters
+Time - O(n)
+Space - O(n)
+3ms 99%
+public static class Dota2Senate40
+{
+    private const char RadiantSenator = 'R';
+    private const char DireSenator = 'D';
+    private const string RadiantParty = "Radiant";
+    private const string DireParty = "Dire";
+
+    public static string PredictPartyVictory(string senate)
+    {
+        var senatorQueue = new Queue<char>(capacity: senate.Length);
+        int activeRadiantSenators = 0;
+        int activeDireSenators = 0;
+        foreach (char senator in senate)
+        {
+            senatorQueue.Enqueue(senator);
+            if (senator == RadiantSenator)
+                activeRadiantSenators++;
+            else
+                activeDireSenators++;
+        }
+
+        int radiantSenatorsToBan = 0;
+        int direSenatorsToBan = 0;
+        while (activeRadiantSenators > 0 && activeDireSenators > 0)
+        {
+            var currentSenator = senatorQueue.Dequeue();
+            if (currentSenator == RadiantSenator)
+            {
+                if (radiantSenatorsToBan > 0)
+                    radiantSenatorsToBan--;
+                else
+                {
+                    direSenatorsToBan++;
+                    activeDireSenators--;
+                    senatorQueue.Enqueue(currentSenator);
+                }
+            }
+            else
+            {
+                if (direSenatorsToBan > 0)
+                    direSenatorsToBan--;
+                else
+                {
+                    radiantSenatorsToBan++;
+                    activeRadiantSenators--;
+                    senatorQueue.Enqueue(currentSenator);
+                }
+            }
+        }
+
+        return activeRadiantSenators > 0 ? RadiantParty : DireParty;
+    }
+}
+
+
+// C#
+Greedy (voting senator always bans the first opponent after him) +
+BitArray as a queue of active senators +
+Lomuto-Like Partitioning of BitArray (move senators that have survived the round to the beginning of the array) +
+Ban lazily using counters
+Time - O(n)
+Space - O(n/8) => O(n)
+3ms 99%
+public static class Dota2Senate50
+{
+    private const bool RadiantSenator = true;
+    private const bool DireSenator = false;
+    private const string RadiantParty = "Radiant";
+    private const string DireParty = "Dire";
+
+    public static string PredictPartyVictory(string senate)
+    {
+        var senators = new BitArray(senate.Length);
+        int activeRadiantSenators = 0;
+        int activeDireSenators = 0;
+        for (int i = 0; i < senate.Length; i++)
+            if (senate[i] == 'R')
+            {
+                senators[i] = RadiantSenator;
+                activeRadiantSenators++;
+            }
+            else
+            {
+                senators[i] = DireSenator;
+                activeDireSenators++;
+            }
+
+        int activeSenators = senate.Length;
+        int radiantSenatorsToBan = 0;
+        int direSenatorsToBan = 0;
+        while (activeRadiantSenators > 0 && activeDireSenators > 0)
+        {
+            int insertionIndex = 0;
+            for (int i = 0; i < activeSenators; i++)
+            {
+                var currentSenator = senators[i];
+                if (currentSenator == RadiantSenator)
+                {
+                    if (radiantSenatorsToBan > 0)
+                        radiantSenatorsToBan--;
+                    else
+                    {
+                        direSenatorsToBan++;
+                        activeDireSenators--;
+                        senators[insertionIndex] = currentSenator;
+                        insertionIndex++;
+                    }
+                }
+                else
+                {
+                    if (direSenatorsToBan > 0)
+                        direSenatorsToBan--;
+                    else
+                    {
+                        radiantSenatorsToBan++;
+                        activeRadiantSenators--;
+                        senators[insertionIndex] = currentSenator;
+                        insertionIndex++;
+                    }
+                }
+            }
+            activeSenators = insertionIndex;
+        }
+
+        return activeRadiantSenators > 0 ? RadiantParty : DireParty;
+    }
+}
+
+public static class Dota2Senate51
+{
+    private const bool RadiantSenator = true;
+    private const bool DireSenator = false;
+    private const string RadiantParty = "Radiant";
+    private const string DireParty = "Dire";
+
+    public static string PredictPartyVictory(string senate)
+    {
+        var senators = new BitArray(senate.Length);
+        int activeRadiantSenators = 0;
+        int activeDireSenators = 0;
+        for (int i = 0; i < senate.Length; i++)
+            if (senate[i] == 'R')
+            {
+                senators[i] = RadiantSenator;
+                activeRadiantSenators++;
+            }
+            else
+            {
+                senators[i] = DireSenator;
+                activeDireSenators++;
+            }
+
+        if (activeRadiantSenators == 0) return DireParty;
+        if (activeDireSenators == 0) return RadiantParty;
+
+        int activeSenators = senate.Length;
+        int radiantSenatorsToBan = 0;
+        int direSenatorsToBan = 0;
+        while (true)
+        {
+            int insertionIndex = 0;
+            for (int i = 0; i < activeSenators; i++)
+            {
+                var currentSenator = senators[i];
+                if (currentSenator == RadiantSenator)
+                {
+                    if (radiantSenatorsToBan > 0)
+                        radiantSenatorsToBan--;
+                    else
+                    {
+                        direSenatorsToBan++;
+                        activeDireSenators--;
+                        if (activeDireSenators == 0) return RadiantParty;
+                        senators[insertionIndex] = currentSenator;
+                        insertionIndex++;
+                    }
+                }
+                else
+                {
+                    if (direSenatorsToBan > 0)
+                        direSenatorsToBan--;
+                    else
+                    {
+                        radiantSenatorsToBan++;
+                        activeRadiantSenators--;
+                        if (activeRadiantSenators == 0) return DireParty;
+                        senators[insertionIndex] = currentSenator;
+                        insertionIndex++;
+                    }
+                }
+            }
+            activeSenators = insertionIndex;
+        }
+    }
+}
+
+
+
+// ===============================================
+
+
+// kotlin, naive,
+// 66%
+class Solution1 {
+    fun countEven(num: Int): Int {
+        var count = 0
+        for (value in 1..num) {
+            if (isEvenSum(value)) count++
+        }
+        return count
+    }
+
+    private fun isEvenSum(num: Int): Boolean {
+        var left = num
+        var sum = 0
+        while (left > 0) {
+            sum = sum xor (left % 10)
+            left /= 10
+        }
+        return (sum and 1) == 0
+    }
+}
+
+
+// C#, Naive
+// Time - O(number)
+// Space - O(1)
+public static class IntegerCounter10
+{
+    public static int CountNumbersWithEvenDigitSum(int maxNumber)
+    {
+        const int minNumber = 1;
+
+        int counter = 0;
+        for (int number = minNumber; number <= maxNumber; number++)
+            if (GetDigitSum(number) % 2 == 0)
+                counter++;
+        return counter;
+    }
+
+    private static int GetDigitSum(int number)
+    {
+        int digitSum = 0;
+        while (number > 0)
+        {
+            (number, int digit) = int.DivRem(number, 10);
+            digitSum += digit;
+        }
+        return digitSum;
+    }
+}
+
+
+// kotlin, math
+
+    // 00, 02, 04, 06, 08, 11, 13, 15, 17, 19
+    // 20, 22, 24, 26, 28, 31, 33, 35, 37, 39
+    // 40, 42, 44, 46, 48, 51, 53, 55, 57, 59
+    // 60, 62, 64, 66, 68, 71, 73, 75, 77, 79
+    // 80, 82, 84, 86, 88, 91, 93, 95, 97, 99
+    // 00..99 = 5 * 10 = 50
+
+    // 100..199
+    // 101, 103, 105, 107, 109, 110, 112, 114, 116, 118
+    // 121, 123, 125, 127, 129, 130, 132, 134, 136, 138
+    // 141, 143, 145, 147, 149, 150, 152, 154, 156, 158
+    // 161, 163, 165, 167, 169, 170, 172, 174, 176, 178
+    // 181, 183, 185, 187, 189, 190, 192, 194, 196, 198
+    // 100..200 = 5*10 = 50
+
+    // 200..299:
+    // 200, 202, 204, 206, 208, 211, 213, 215, 217, 219
+    // 220, 222, 224, 226, 228, 231, 233, 235, 237, 239
+    // 240, 242, 244, 246, 248, 251, 253, 255, 257, 259
+    // 260, 262, 264, 266, 268, 271, 273, 275, 277, 279
+    // 280, 282, 284, 286, 288, 291, 293, 295, 297, 299
+    // 200..299 = 5 * 10 = 50
+
+    // 300..399 = 50
+    // 400..499 = 50
+
+class Solution2 {
+    fun countEven(num: Int): Int {
+        var count = (num / 20) * 10
+        val left = num % 20
+        val hundreds = num / 100
+        if (hundreds % 2 == 0) {
+            count += (left + 1) / 2
+        } else {
+            count += (left) / 2
+        }
+        return count
+    }
+}
+
+
+1
+
+
+
+
+
+
+
+
