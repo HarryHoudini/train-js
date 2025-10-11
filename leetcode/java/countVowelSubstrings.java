@@ -1,4 +1,3 @@
-package leetcode.java;
 
 import java.util.Set;
 

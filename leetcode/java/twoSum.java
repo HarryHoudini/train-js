@@ -1,3 +1,6 @@
+import java.util.HashMap;
+import java.util.Map;
+
 class TwoSum {
     public int[] twoSum(int[] nums, int target) {
         Map<Integer, Integer> map = new HashMap<>();
@@ -5,7 +8,7 @@ class TwoSum {
         for (int i = 0; i < nums.length; i++) {
             int compliment = target - nums[i];
             if (map.containsKey(compliment)) {
-                return new int[]{map.get(compliment), i}
+                return new int[]{map.get(compliment), i};
             }
             map.put(nums[i], i);
         }
